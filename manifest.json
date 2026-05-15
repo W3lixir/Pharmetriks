@@ -1,0 +1,36 @@
+{
+  "name": "RXaudit",
+  "short_name": "RXaudit",
+  "description": "Offline-first pharmacy audit tool — dispensing, inventory, and OPEX tracking.",
+  "lang": "en-PH",
+  "dir": "ltr",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#0033FF",
+  "background_color": "#F2E6EE",
+  "categories": ["business", "productivity", "medical"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 256x256 384x384 512x512 1024x1024",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-monochrome.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "monochrome"
+    }
+  ]
+}

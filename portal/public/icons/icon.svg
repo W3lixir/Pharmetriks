@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RXaudit">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#977DFF"/>
+      <stop offset="55%" stop-color="#0033FF"/>
+      <stop offset="100%" stop-color="#0600AB"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.25" cy="0.2" r="0.7">
+      <stop offset="0%"  stop-color="#FFCCF2" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#FFCCF2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cross" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F2E6EE"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded square background -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#glow)"/>
+
+  <!-- subtle highlight -->
+  <path d="M0 0 H512 V200 Q256 320 0 200 Z" fill="#FFFFFF" opacity="0.06"/>
+
+  <!-- Rx cross emblem -->
+  <g transform="translate(256 256)">
+    <rect x="-32" y="-128" width="64" height="256" rx="22" fill="url(#cross)"/>
+    <rect x="-128" y="-32" width="256" height="64" rx="22" fill="url(#cross)"/>
+  </g>
+</svg>

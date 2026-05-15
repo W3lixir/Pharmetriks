@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-1: #F2E6EE;
+    --bg-2: #FFCCF2;
+    --bg-3: #977DFF;
+    --bg-4: #0033FF;
+    --ink: #00003D;
+    --ink-2: #0600AB;
+    --accent: #0033FF;
+    --accent-soft: #977DFF;
+    --pink: #FFCCF2;
+  }
+
+  html, body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-sans text-ink bg-lyna-page min-h-dvh;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    @apply rounded-glass shadow-glass;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px]
+           px-4 py-2.5 text-sm font-bold text-white shadow-glass
+           bg-lyna-cta transition;
+    letter-spacing: -0.1px;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+  .btn-primary:disabled {
+    @apply opacity-60 cursor-not-allowed;
+    filter: none;
+    transform: none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px]
+           px-4 py-2.5 text-sm font-bold text-ink-2 transition
+           border bg-white/60;
+    border-color: rgba(151, 125, 255, 0.22);
+  }
+  .btn-ghost:hover {
+    @apply bg-white;
+    border-color: var(--accent-soft);
+  }
+
+  .input {
+    @apply w-full rounded-[10px] border px-3 py-2.5 text-sm font-medium
+           bg-white/70 outline-none transition;
+    border-color: rgba(151, 125, 255, 0.22);
+    color: var(--ink);
+  }
+  .input:focus {
+    border-color: var(--accent);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(0, 51, 255, 0.14);
+  }
+  .input::placeholder { color: #b8a4ff; }
+}
