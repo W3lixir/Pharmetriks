@@ -23,8 +23,8 @@ const FAQS: { q: string; a: string }[] = [
     a: "Sinusubukan naming i-approve within a few hours. Pero realistically, kung mag-bayad ka ng gabi, baka kinabukasan na natin ma-approve. Once approved, may email ka na makukuha at pwede mo nang gamitin agad ang app.",
   },
   {
-    q: 'May refund ba kung hindi gumana sa phone ko?',
-    a: "Oo. Kung hindi gumana ang app sa device mo within 7 days of purchase, message lang kami at i-refund namin ang ₱249 mo via GCash. Pero hindi pa kami nakakatanggap ng refund request — usually gumagana naman sa lahat ng modern Android (2019+) at iPhone (2018+).",
+    q: 'May refund ba kung hindi gumana sa device ko?',
+    a: "Pasensya na, sa ngayon ay walang refunds — final ang lahat ng sales. Para makasiguro ka, please message kami muna sa Facebook page (fb.com/rxauditph) before mag-bayad para masagot lahat ng tanong mo. Usually gumagana naman sa modern Android (2019+) at iPhone (2018+), pero mas mainam yung may peace of mind ka bago commit.",
   },
   {
     q: 'Kaya bang i-install sa multiple phones?',

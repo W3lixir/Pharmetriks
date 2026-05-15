@@ -20,9 +20,8 @@ export default function Hero() {
             </Pill>
 
             <h1 className="mt-5 text-[34px] leading-[1.05] font-extrabold tracking-[-1px] sm:text-5xl lg:text-[56px]">
-              Pharmacy audit{' '}
-              <span className="bg-clip-text text-transparent bg-lyna-cta">na walang internet</span>{' '}
-              kailangan.
+              Pharmacy audit na{' '}
+              <span className="bg-clip-text text-transparent bg-lyna-cta">pwede kahit walang internet</span>.
             </h1>
 
             <p className="mt-5 mx-auto lg:mx-0 max-w-xl text-[15px] sm:text-base leading-relaxed text-ink-2/85 font-medium">
