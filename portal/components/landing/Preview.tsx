@@ -8,6 +8,7 @@ type Item = {
   title: string;
   body: string;
   bullets: string[];
+  image: string;
 };
 
 const ITEMS: Item[] = [
@@ -20,6 +21,7 @@ const ITEMS: Item[] = [
       'Auto-detect low stock + expiry',
       'Optional customer name field',
     ],
+    image: '/img/Dispensing.png',
   },
   {
     icon: 'inventory',
@@ -30,6 +32,7 @@ const ITEMS: Item[] = [
       'Bulk CSV import + export',
       'Low-stock / out-of-stock badges',
     ],
+    image: '/img/Inventory.png',
   },
   {
     icon: 'opex',
@@ -40,6 +43,7 @@ const ITEMS: Item[] = [
       'Categorized expense log',
       'Gross sales · Expenses · Net at a glance',
     ],
+    image: '/img/OPEX.png',
   },
 ];
 
@@ -67,7 +71,7 @@ export default function Preview() {
                 key={item.title}
                 tone="strong"
                 className={`p-6 sm:p-8 lg:p-10 grid gap-6 sm:gap-8 lg:gap-12 ${
-                  reverse ? 'lg:grid-cols-[1fr_1.2fr]' : 'lg:grid-cols-[1.2fr_1fr]'
+                  reverse ? 'lg:grid-cols-[1fr_1.3fr]' : 'lg:grid-cols-[1.3fr_1fr]'
                 }`}
               >
                 <div className={`flex flex-col justify-center ${reverse ? 'lg:order-2' : ''}`}>
@@ -79,8 +83,8 @@ export default function Preview() {
                     {item.body}
                   </p>
                   <ul className="mt-4 space-y-2">
-                    {item.bullets.map(b => (
-                      <li key={b} className="flex items-start gap-2.5 text-[13.5px] font-semibold text-ink">
+                    {item.bullets.map((b, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-[13.5px] font-semibold text-ink">
                         <span className="mt-0.5 grid h-5 w-5 place-items-center rounded-full bg-accent/15 text-accent shrink-0">
                           <Icon name="check" size={12} strokeWidth={2.6} />
                         </span>
@@ -90,15 +94,15 @@ export default function Preview() {
                   </ul>
                 </div>
 
-                <div className={`relative ${reverse ? 'lg:order-1' : ''}`}>
-                  <div className="aspect-[4/3] rounded-glass bg-pink-soft border border-white/65 overflow-hidden p-5 relative">
-                    <div aria-hidden className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-accent-soft/40 blur-2xl" />
-                    <div aria-hidden className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-pink blur-2xl" />
-                    <div className="relative h-full grid place-items-center">
-                      <div className="grid h-24 w-24 sm:h-32 sm:w-32 place-items-center rounded-[24px] bg-white/80 backdrop-blur-md border border-white shadow-glass">
-                        <Icon name={item.icon} size={48} className="text-accent" strokeWidth={1.6} />
-                      </div>
-                    </div>
+                <div className={`relative w-full min-h-[300px] sm:min-h-[400px] ${reverse ? 'lg:order-1' : ''}`}>
+                  <div className="w-full h-full rounded-glass bg-pink-soft border border-white/65 overflow-hidden relative shadow-lg">
+                    <div aria-hidden className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-accent-soft/40 blur-2xl z-10" />
+                    <div aria-hidden className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-pink blur-2xl z-10" />
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                 </div>
               </GlassCard>
