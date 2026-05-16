@@ -8,7 +8,7 @@
  *
  * Bump SW_VERSION to roll out a new shell to existing installs.
  */
-const SW_VERSION    = 'rxaudit-v1.0.0';
+const SW_VERSION    = 'rxaudit-v1.0.1';
 const SHELL_CACHE   = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const FONTS_CACHE   = `${SW_VERSION}-fonts`;
@@ -68,7 +68,11 @@ self.addEventListener('fetch', (event) => {
   // 1) Never intercept the license / auth API — always network.
   if (url.pathname.startsWith('/api/')) return;
 
-  // 2) Navigation requests: network-first, fall back to cached /app shell.
+  // 2) Never intercept auth/portal routes — let the server handle redirects.
+  const AUTH_PATHS = ['/login', '/signup', '/logout', '/pending', '/upload-receipt', '/admin'];
+  if (AUTH_PATHS.some(p => url.pathname === p || url.pathname.startsWith(p + '/'))) return;
+
+  // 3) Navigation requests: network-first, fall back to cached /app shell.
   if (req.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(req));
     return;
@@ -95,9 +99,11 @@ self.addEventListener('fetch', (event) => {
 async function networkFirstNavigation(req) {
   try {
     const fresh = await fetch(req);
-    // Cache a copy of the /app HTML for offline use.
-    const cache = await caches.open(SHELL_CACHE);
-    cache.put(req, fresh.clone()).catch(() => {});
+    // Only cache successful, non-redirect responses.
+    if (fresh.status === 200 && fresh.type !== 'opaque') {
+      const cache = await caches.open(SHELL_CACHE);
+      cache.put(req, fresh.clone()).catch(() => {});
+    }
     return fresh;
   } catch {
     const cached =
