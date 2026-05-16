@@ -11,8 +11,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  // The HTML file lives at the repo root, one level above portal/.
-  const htmlPath = path.join(process.cwd(), '..', 'rxaudit-local.html');
+  // The HTML file is copied to public/ at build time so Vercel can serve it.
+  const htmlPath = path.join(process.cwd(), 'public', 'rxaudit-local.html');
   const html = await readFile(htmlPath, 'utf8');
   return new Response(html, {
     status: 200,

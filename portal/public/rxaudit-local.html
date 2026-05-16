@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>RXaudit</title>
+  <meta name="description" content="Offline-first pharmacy audit tool — dispensing, inventory, and OPEX tracking.">
+
+  <!-- PWA manifest + theme -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0033FF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#00003D" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light">
+
+  <!-- iOS / Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RXaudit">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="mask-icon" href="/icons/icon-monochrome.svg" color="#0033FF">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ══════════ LYNA THEME — lightweight liquid glass ══════════ */
+    :root {
+      --bg-1: #F2E6EE;
+      --bg-2: #FFCCF2;
+      --bg-3: #977DFF;
+      --bg-4: #0033FF;
+      --ink: #00003D;
+      --ink-2: #0600AB;
+      --ink-3: #0600AF;
+      --accent: #0033FF;
+      --accent-hover: #0028cc;
+      --accent-soft: #977DFF;
+      --accent-soft-2: #b8a4ff;
+      --pink: #FFCCF2;
+      --pink-soft: #F2E6EE;
+      --glass-bg: rgba(255,255,255,0.55);
+      --glass-bg-strong: rgba(255,255,255,0.72);
+      --glass-border: rgba(255,255,255,0.65);
+      --glass-shadow: 0 8px 28px rgba(6,0,171,0.12);
+      --hairline: rgba(151,125,255,0.22);
+      --hairline-soft: rgba(151,125,255,0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    html { overflow-x: hidden; }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Sora', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--ink); display: flex; height: 100vh; overflow: hidden;
+      width: 100%; max-width: 100vw;
+      background:
+        radial-gradient(1100px 700px at -10% -10%, var(--pink) 0%, transparent 55%),
+        radial-gradient(900px 600px at 110% 10%, var(--accent-soft) 0%, transparent 60%),
+        radial-gradient(1200px 800px at 50% 120%, var(--accent) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-1) 0%, #efe7ff 60%, #e3ddff 100%);
+      letter-spacing: -0.01em;
+    }
+
+    /* ══════════ ICONS ══════════ */
+    .ic {
+      width: 18px; height: 18px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+      display: inline-block; vertical-align: middle;
+    }
+    .ic-sm { width: 14px; height: 14px; stroke-width: 2.2; }
+    .ic-lg { width: 28px; height: 28px; stroke-width: 1.8; }
+    .ic-xl { width: 40px; height: 40px; stroke-width: 1.6; }
+    .ic-fill { fill: currentColor; stroke: none; }
+    .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+    /* ══════════ SIDEBAR ══════════ */
+    .sidebar {
+      width: 236px; min-width: 236px;
+      background: linear-gradient(180deg, rgba(0,0,61,0.92) 0%, rgba(6,0,171,0.92) 60%, rgba(0,51,255,0.85) 100%);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      display: flex; flex-direction: column;
+      color: white; flex-shrink: 0;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 0 40px rgba(0,0,61,0.18);
+    }
+
+    .sidebar-brand {
+      padding: 22px 18px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .sidebar-brand img {
+      height: 36px; width: auto; object-fit: contain;
+      display: block; margin-bottom: 10px;
+    }
+    .sidebar-brand .app-name {
+      font-size: 14.5px; font-weight: 800; color: white; letter-spacing: -0.3px;
+    }
+    .sidebar-brand .app-sub {
+      font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; font-weight: 500;
+    }
+
+    .sidebar-nav { padding: 16px 12px; flex: 1; }
+    .nav-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 1.2px; color: rgba(255,255,255,0.35);
+      padding: 0 10px; margin: 14px 0 8px;
+    }
+    .nav-label:first-child { margin-top: 0; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 10px;
+      cursor: pointer; font-size: 13.5px; font-weight: 600;
+      color: rgba(255,255,255,0.65);
+      transition: all 0.15s; margin-bottom: 3px; user-select: none;
+      border: 1px solid transparent;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.08); }
+    .nav-item.active {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(0,51,255,0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .nav-item .ni { font-size: 16px; flex-shrink: 0; }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: rgba(255,255,255,0.35); font-weight: 500;
+    }
+    .rx-cross {
+      width: 16px; height: 16px; flex-shrink: 0;
+    }
+
+    /* ══════════ MAIN ══════════ */
+    .main { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; background: transparent; }
+    .page { padding: 30px 34px; max-width: 1100px; width: 100%; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Section header */
+    .section-header { margin-bottom: 24px; }
+    .section-header h2 {
+      font-size: 26px; font-weight: 800; color: var(--ink);
+      letter-spacing: -0.6px; line-height: 1.15;
+    }
+    .section-header p { font-size: 13px; color: var(--accent-soft); margin-top: 5px; font-weight: 500; }
+
+    /* Inputs */
+    input[type=text], input[type=number], input[type=date], input[type=month], select {
+      border: 1.5px solid var(--hairline); border-radius: 10px; padding: 9px 13px;
+      font-size: 14px; color: var(--ink); background: rgba(255,255,255,0.7); outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; font-family: inherit;
+      font-weight: 500;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(0,51,255,0.14);
+    }
+    input::placeholder { color: var(--accent-soft-2); }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 17px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+      white-space: nowrap; letter-spacing: -0.1px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(0,51,255,0.32), inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+    .btn-primary:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,51,255,0.4); }
+    .btn-primary:disabled { background: var(--accent-soft-2); cursor: not-allowed; box-shadow: none; transform: none; filter: none; }
+    .btn-secondary {
+      background: var(--glass-bg-strong); color: var(--ink-2);
+      border: 1.5px solid var(--glass-border);
+      -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    }
+    .btn-secondary:hover { background: white; border-color: var(--accent-soft); }
+    .btn-danger { color: #dc2626; background: rgba(255,255,255,0.6); border: 1.5px solid #fca5a5; }
+    .btn-danger:hover { background: #fef2f2; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.5); color: var(--accent);
+      border: 1.5px solid var(--hairline);
+    }
+    .btn-ghost:hover { background: white; border-color: var(--accent); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 16px;
+      gap: 10px; flex-wrap: wrap;
+    }
+    .toolbar-left { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .toolbar-right { display: flex; gap: 8px; align-items: center; }
+
+    /* Tables — glassy card */
+    .table-wrap {
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: var(--glass-shadow);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: rgba(255,255,255,0.45); text-align: left; padding: 12px 16px;
+      font-size: 10.5px; font-weight: 800; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    td { padding: 12px 16px; font-size: 14px; color: var(--ink); border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; font-weight: 500; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.45); }
+    .empty-row td { text-align: center; color: var(--accent-soft-2); padding: 48px; font-size: 14px; font-weight: 500; }
+    .text-right { text-align: right; }
+    .font-mono { font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; }
+    .badge-green  { background: #d1fae5; color: #065f46; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-red    { background: #fee2e2; color: #991b1b; }
+    .badge-violet { background: rgba(151,125,255,0.22); color: var(--ink-2); }
+
+    /* Stat cards — glassy */
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 18px 20px;
+      box-shadow: var(--glass-shadow);
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .stat-card .slabel { font-size: 11px; font-weight: 700; color: var(--accent-soft); text-transform: uppercase; letter-spacing: 0.8px; position: relative; }
+    .stat-card .sval { font-size: 30px; font-weight: 800; color: var(--accent); margin-top: 6px; letter-spacing: -0.8px; position: relative; font-variant-numeric: tabular-nums; }
+    .stat-card .sval.yellow { color: #d97706; }
+    .stat-card .sval.red { color: #dc2626; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,61,0.45);
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      z-index: 200;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--glass-bg-strong);
+      -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px; padding: 28px;
+      width: 100%; max-width: 500px;
+      box-shadow: 0 28px 70px rgba(0,0,61,0.25);
+      max-height: 92vh; overflow-y: auto;
+    }
+    .modal h2 { font-size: 19px; font-weight: 800; margin-bottom: 22px; color: var(--ink); letter-spacing: -0.4px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; letter-spacing: -0.1px; }
+    .form-group input, .form-group select { width: 100%; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-footer {
+      display: flex; gap: 8px; justify-content: flex-end;
+      margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--hairline);
+    }
+
+    /* ══════ Dispensing ══════ */
+    .dispense-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    .product-list {
+      max-height: 360px; overflow-y: auto;
+      border: 1px solid var(--glass-border); border-radius: 16px;
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      box-shadow: var(--glass-shadow);
+    }
+    .product-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--hairline-soft); transition: background 0.1s; }
+    .product-item:last-child { border-bottom: none; }
+    .product-item:hover { background: rgba(255,255,255,0.55); }
+    .product-item.in-cart { background: rgba(151,125,255,0.12); }
+    .pname { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.1px; }
+    .pbrand { font-weight: 500; color: #94a3b8; font-size: 13px; }
+    .pmeta { font-size: 12px; color: var(--accent-soft); margin-top: 4px; font-weight: 500; }
+    .pstock { color: var(--accent); font-weight: 800; }
+    .pout   { color: #dc2626; font-weight: 800; }
+    .pin-cart { color: var(--accent); font-weight: 800; }
+
+    .cart-panel {
+      background: var(--glass-bg-strong);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 20px;
+      position: sticky; top: 28px;
+      box-shadow: var(--glass-shadow);
+    }
+    .cart-panel h3 { font-size: 15px; font-weight: 800; margin-bottom: 14px; color: var(--ink); letter-spacing: -0.2px; }
+    .cart-empty { color: var(--accent-soft-2); font-size: 13px; text-align: center; padding: 22px 0; font-weight: 500; }
+    .cart-item {
+      position: relative; display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-left: 4px solid var(--accent);
+      background: rgba(255,255,255,0.6);
+      border-radius: 0 12px 12px 0; margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(6,0,171,0.06);
+    }
+    .ci-left { flex: 1; min-width: 0; padding-right: 18px; }
+    .ci-name { font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.25; letter-spacing: -0.1px; }
+    .ci-brand { font-size: 11.5px; color: var(--accent-soft); margin-top: 2px; font-weight: 500; }
+    .ci-detail { font-size: 11px; color: var(--accent); margin-top: 4px; font-weight: 600; }
+    .ci-subtotal { font-size: 12.5px; font-weight: 800; color: var(--ink-2); margin-top: 4px; }
+    .ci-unit { font-size: 10.5px; color: var(--accent-soft); font-weight: 600; }
+    .ci-right { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; min-width: 56px; }
+    .ci-qty-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent-soft); margin-bottom: 2px; }
+    .ci-qty-big { font-size: 32px; font-weight: 900; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1.4px; }
+    .ci-qty-controls { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+    .qty-btn {
+      width: 24px; height: 24px; border-radius: 7px; border: 1.5px solid var(--hairline);
+      background: white; color: var(--accent); font-size: 14px; font-weight: 800;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      line-height: 1; flex-shrink: 0; transition: all 0.1s; padding: 0;
+    }
+    .qty-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .ci-remove { position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer; color: var(--accent-soft-2); font-size: 16px; line-height: 1; padding: 2px 4px; }
+    .ci-remove:hover { color: #dc2626; }
+    .cart-divider { border: none; border-top: 1px solid var(--hairline); margin: 12px 0; }
+    .cart-total-row { display: flex; justify-content: space-between; font-weight: 800; font-size: 16px; margin-bottom: 12px; color: var(--ink); letter-spacing: -0.3px; }
+    .cust-label { font-size: 12.5px; font-weight: 700; color: var(--ink-2); display: block; margin-bottom: 6px; }
+
+    /* ══════ OPEX ══════ */
+    .opex-layout { display: grid; grid-template-columns: 1fr 290px; gap: 20px; align-items: start; }
+    .side-card {
+      background: var(--glass-bg-strong);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 22px;
+      box-shadow: var(--glass-shadow);
+    }
+    .side-card h3 { font-size: 14px; font-weight: 800; color: var(--ink); margin-bottom: 14px; letter-spacing: -0.2px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--hairline-soft); font-weight: 500; }
+    .summary-row:last-child { border-bottom: none; font-weight: 800; font-size: 14.5px; padding-top: 11px; color: var(--ink); }
+    .summary-empty { color: var(--accent-soft-2); font-size: 13px; text-align: center; padding: 18px 0; font-weight: 500; }
+
+    /* Period filter */
+    .period-filter {
+      display: inline-flex;
+      background: var(--glass-bg-strong);
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border); border-radius: 12px; padding: 4px; gap: 2px; margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(6,0,171,0.08);
+    }
+    .period-btn { padding: 7px 16px; border-radius: 8px; border: none; background: transparent; font-size: 12.5px; font-weight: 700; color: var(--accent); cursor: pointer; transition: all 0.1s; font-family: inherit; letter-spacing: -0.1px; }
+    .period-btn:hover { background: rgba(255,255,255,0.6); }
+    .period-btn.active {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,51,255,0.35);
+    }
+
+    /* See more */
+    .see-more-row td { text-align: center; padding: 12px; }
+    .see-more-btn { background: transparent; border: none; color: var(--accent); font-weight: 800; font-size: 12.5px; cursor: pointer; padding: 7px 14px; border-radius: 8px; font-family: inherit; }
+    .see-more-btn:hover { background: rgba(255,255,255,0.6); }
+
+    /* Upgrade CTA */
+    .upgrade-cta {
+      margin: 12px 12px 0; padding: 16px 14px;
+      background: linear-gradient(135deg, var(--accent-soft) 0%, var(--accent) 70%, var(--ink-2) 100%);
+      border-radius: 14px; color: white; text-align: center;
+      box-shadow: 0 6px 20px rgba(0,51,255,0.42), inset 0 1px 0 rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.12);
+      position: relative; overflow: hidden;
+    }
+    .upgrade-cta::before {
+      content: ""; position: absolute; top: -30px; right: -30px;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: radial-gradient(circle, var(--pink) 0%, transparent 70%);
+      opacity: 0.5; pointer-events: none;
+    }
+    .upgrade-cta .uc-title { font-size: 13px; font-weight: 800; margin-bottom: 3px; position: relative; letter-spacing: -0.2px; }
+    .upgrade-cta .uc-sub { font-size: 10.5px; opacity: 0.88; margin-bottom: 11px; line-height: 1.45; position: relative; font-weight: 500; }
+    .upgrade-cta .uc-btn {
+      display: block; width: 100%; padding: 9px; border-radius: 8px;
+      background: white; color: var(--ink-2); font-weight: 800; font-size: 12px;
+      text-decoration: none; border: none; cursor: pointer; transition: all 0.15s;
+      position: relative; letter-spacing: -0.1px;
+    }
+    .upgrade-cta .uc-btn:hover { background: var(--pink-soft); transform: translateY(-1px); }
+
+    /* ══════ Mobile Header (phones only) ══════ */
+    .mobile-header {
+      display: none; align-items: center; gap: 8px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(0,0,61,0.92) 0%, rgba(6,0,171,0.92) 100%);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .mob-logo { height: 26px; width: auto; object-fit: contain; }
+    .mob-header-text { flex: 1; }
+    .mob-title { font-size: 13.5px; font-weight: 800; color: white; display: block; line-height: 1.2; letter-spacing: -0.2px; }
+    .mob-sub { font-size: 10px; color: rgba(255,255,255,0.5); display: block; font-weight: 500; }
+    .mobile-only-cta { display: none; }
+
+    .mob-upgrade-btn {
+      font-size: 10.5px; font-weight: 800; color: white;
+      background: rgba(151,125,255,0.4); border: 1px solid rgba(255,255,255,0.25);
+      padding: 6px 12px; border-radius: 99px; text-decoration: none; white-space: nowrap;
+      letter-spacing: -0.1px; display: inline-flex; align-items: center; gap: 2px;
+    }
+    @media (max-width: 380px) {
+      .mob-upgrade-btn { padding: 6px 10px; font-size: 10px; }
+      .mob-title { font-size: 12.5px; }
+      .mob-sub  { display: none; }
+      .mobile-header { gap: 6px; padding: 10px 10px; }
+    }
+
+    /* ══════ Mobile Bottom Tabs (phones only) ══════ */
+    .mobile-tabs {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,61,0.85);
+      -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(151,125,255,0.25);
+      z-index: 200; padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .mob-tab {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 4px 9px; cursor: pointer;
+      color: rgba(255,255,255,0.45); font-size: 10px; font-weight: 700;
+      gap: 3px; transition: color 0.15s; user-select: none; -webkit-tap-highlight-color: transparent;
+      letter-spacing: -0.1px;
+    }
+    .mob-tab.active { color: var(--accent-soft); }
+    .mob-tab-icon { width: 22px; height: 22px; stroke-width: 2; }
+
+    /* ══════ Guide button (sidebar + mobile) ══════ */
+    .guide-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      margin: 0 12px 10px; padding: 10px 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 10px;
+      color: rgba(255,255,255,0.85); font-size: 12.5px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+      letter-spacing: -0.1px; width: calc(100% - 24px);
+    }
+    .guide-btn:hover {
+      background: rgba(255,255,255,0.14); color: white;
+      border-color: rgba(255,255,255,0.22);
+      transform: translateY(-1px);
+    }
+    .guide-btn .gi { font-size: 14px; }
+
+    .mob-guide-btn {
+      font-size: 16px; color: white;
+      background: rgba(151,125,255,0.35); border: 1px solid rgba(255,255,255,0.2);
+      width: 30px; height: 30px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; text-decoration: none;
+      transition: all 0.15s;
+    }
+    .mob-guide-btn:hover, .mob-guide-btn:active { background: rgba(151,125,255,0.55); }
+
+    /* ══════ Guided tour — spotlight coachmark ══════ */
+    /* Dim layer = 4 panels around the spotlight rectangle (so the target stays sharp & interactive). */
+    .tour-dim {
+      display: none; position: fixed; background: rgba(0,0,61,0.55);
+      z-index: 290; transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: auto;
+    }
+    .tour-dim.show { display: block; }
+    #tourDimTop, #tourDimBottom { left: 0; right: 0; }
+    #tourDimLeft, #tourDimRight { top: 0; bottom: 0; }
+
+    /* Highlight ring on the target element */
+    .tour-spotlight {
+      display: none; position: fixed;
+      border-radius: 14px;
+      box-shadow:
+        0 0 0 3px rgba(0,51,255,0.9),
+        0 0 0 8px rgba(151,125,255,0.35),
+        0 0 28px rgba(0,51,255,0.55);
+      z-index: 295;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: tourPulse 2s ease-in-out infinite;
+    }
+    .tour-spotlight.show { display: block; }
+    @keyframes tourPulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(0,51,255,0.9), 0 0 0 8px rgba(151,125,255,0.35), 0 0 28px rgba(0,51,255,0.55); }
+      50%      { box-shadow: 0 0 0 3px rgba(0,51,255,0.9), 0 0 0 14px rgba(151,125,255,0.18), 0 0 36px rgba(0,51,255,0.7); }
+    }
+
+    /* The floating coachmark card */
+    .tour-card {
+      display: none; position: fixed;
+      width: min(380px, calc(100vw - 24px));
+      background: white;
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,61,0.32);
+      overflow: visible;
+      z-index: 310;
+      animation: tourPop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: top 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+                  left 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .tour-card.show { display: block; }
+    @keyframes tourPop {
+      from { opacity: 0; transform: translateY(8px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Arrow pointer — flipped based on .arrow-{top,bottom,left,right} class */
+    .tour-arrow {
+      position: absolute; width: 16px; height: 16px;
+      background: white;
+      border: 1px solid var(--glass-border);
+      transform: rotate(45deg);
+    }
+    .tour-card.arrow-top    .tour-arrow { top: -9px;    left: 28px; border-right: none; border-bottom: none; }
+    .tour-card.arrow-bottom .tour-arrow { bottom: -9px; left: 28px; border-left: none;  border-top: none;    }
+    .tour-card.arrow-left   .tour-arrow { left: -9px;   top: 28px;  border-right: none; border-top: none;    }
+    .tour-card.arrow-right  .tour-arrow { right: -9px;  top: 28px;  border-left: none;  border-bottom: none; }
+    .tour-card.arrow-none   .tour-arrow { display: none; }
+
+    .tour-header {
+      position: relative;
+      padding: 18px 20px 14px;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(255,204,242,0.5) 0%, transparent 55%),
+        linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      color: white;
+      border-radius: 18px 18px 0 0;
+    }
+    .tour-step-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 99px;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.3);
+      font-size: 10px; font-weight: 800; letter-spacing: 1px;
+      text-transform: uppercase; color: white;
+    }
+    .tour-step-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 6px var(--pink); }
+    .tour-emoji {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; margin-top: 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+    .tour-title {
+      font-size: 16px; font-weight: 800; margin-top: 6px; line-height: 1.25;
+      letter-spacing: -0.3px; color: white;
+    }
+
+    .tour-body {
+      padding: 14px 20px 16px;
+    }
+    .tour-subtitle {
+      font-size: 13px; color: var(--ink); font-weight: 500;
+      line-height: 1.5; margin-bottom: 10px;
+    }
+    .tour-subtitle strong { color: var(--ink-2); font-weight: 800; }
+    .tour-tip {
+      padding: 9px 11px;
+      background: linear-gradient(135deg, rgba(255,204,242,0.45), rgba(151,125,255,0.18));
+      border: 1px solid rgba(151,125,255,0.25);
+      border-radius: 10px;
+      font-size: 11.5px; color: var(--ink-2); font-weight: 600; line-height: 1.45;
+    }
+    .tour-tip .tip-label {
+      display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 1px;
+      color: var(--accent); text-transform: uppercase; margin-right: 5px;
+    }
+
+    .tour-footer {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px 14px;
+      border-top: 1px solid var(--hairline-soft);
+      background: rgba(255,255,255,0.6);
+      border-radius: 0 0 18px 18px;
+    }
+    .tour-progress {
+      display: flex; gap: 4px; flex: 1; min-width: 0;
+    }
+    .tour-dot {
+      width: 16px; height: 4px; border-radius: 99px;
+      background: var(--hairline);
+      transition: all 0.25s;
+    }
+    .tour-dot.done { background: var(--accent-soft); }
+    .tour-dot.active {
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-soft) 100%);
+      width: 24px;
+      box-shadow: 0 0 6px rgba(0,51,255,0.4);
+    }
+    .tour-actions {
+      display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+    }
+    .tour-btn {
+      padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700;
+      cursor: pointer; border: none; transition: all 0.15s;
+      font-family: inherit; letter-spacing: -0.1px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .tour-btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      color: white;
+      box-shadow: 0 3px 10px rgba(0,51,255,0.32);
+    }
+    .tour-btn-primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+    .tour-btn-ghost {
+      background: transparent; color: var(--ink-2); border: 1.5px solid var(--hairline);
+    }
+    .tour-btn-ghost:hover { background: rgba(255,255,255,0.9); border-color: var(--accent-soft); }
+    .tour-skip {
+      background: none; border: none; color: var(--accent-soft); font-size: 11px;
+      font-weight: 700; cursor: pointer; padding: 3px 5px; font-family: inherit;
+      letter-spacing: -0.1px; white-space: nowrap;
+    }
+    .tour-skip:hover { color: var(--accent); text-decoration: underline; }
+
+    .tour-close {
+      position: absolute; top: 10px; right: 10px;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white; cursor: pointer; font-size: 14px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .tour-close:hover { background: rgba(255,255,255,0.4); transform: rotate(90deg); }
+
+    /* Mobile: dock the card to the bottom, no arrow */
+    @media (max-width: 640px) {
+      .tour-card.mobile-dock {
+        left: 8px !important; right: 8px !important;
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+        top: auto !important;
+        width: auto;
+        max-width: none;
+      }
+      .tour-card.mobile-dock.mobile-dock-top {
+        top: calc(68px + env(safe-area-inset-top, 0px)) !important;
+        bottom: auto !important;
+      }
+      .tour-card.mobile-dock .tour-arrow { display: none; }
+      .tour-footer { padding: 10px 14px 12px; flex-wrap: wrap; gap: 8px; }
+      .tour-progress { order: 1; width: 100%; }
+      .tour-actions { order: 2; flex: 1; }
+      .tour-skip { order: 3; }
+      .tour-btn { flex: 1; justify-content: center; padding: 8px 12px; }
+      .guide-btn { font-size: 12px; padding: 9px 10px; }
+    }
+
+    @media (max-width: 900px) and (min-width: 641px) {
+      .guide-btn {
+        width: auto; margin: 0 6px 0 4px; padding: 8px 12px;
+        flex-shrink: 0; font-size: 12px;
+      }
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 80px; right: 16px;
+      background: var(--ink); color: white; padding: 12px 20px;
+      border-radius: 12px; font-size: 13px; font-weight: 600;
+      opacity: 0; transform: translateY(6px);
+      transition: all 0.2s; z-index: 999; max-width: 300px;
+      pointer-events: none;
+      box-shadow: 0 10px 30px rgba(0,0,61,0.3);
+      letter-spacing: -0.1px;
+    }
+    #toast.show  { opacity: 1; transform: translateY(0); }
+    #toast.success { background: #059669; }
+    #toast.error   { background: #dc2626; }
+
+    /* ── Tablet (641–900px): horizontal sidebar ── */
+    @media (max-width: 900px) {
+      body { flex-direction: column; height: auto; overflow-y: auto; overflow-x: hidden; }
+      .sidebar { width: 100%; min-width: unset; flex-direction: row; align-items: center; flex-wrap: nowrap; padding-bottom: 0; overflow-x: auto; }
+      .sidebar-brand { border-bottom: none; border-right: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; flex-shrink: 0; }
+      .sidebar-brand img { height: 26px; margin-bottom: 0; }
+      .sidebar-brand .app-name, .sidebar-brand .app-sub { display: none; }
+      .sidebar-nav { display: flex; flex-direction: row; padding: 8px 10px; flex: 1; flex-wrap: nowrap; }
+      .nav-label { display: none; }
+      .nav-item { margin-bottom: 0; margin-right: 4px; padding: 8px 14px; white-space: nowrap; font-size: 13px; }
+      .sidebar-footer { display: none; }
+      .upgrade-cta { display: none; }
+      .main { overflow: auto; }
+      .page { padding: 20px 22px; }
+      .dispense-layout, .opex-layout { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3,1fr); }
+      .form-row { grid-template-columns: 1fr 1fr; }
+      .cart-panel { position: static; }
+    }
+
+    /* ── Phone (≤640px): hide sidebar, show mobile nav ── */
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .mobile-header { display: flex; }
+      .mobile-tabs { display: flex; }
+      body { flex-direction: column; height: auto; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+      .main { overflow: visible; min-width: 0; width: 100%; }
+      .page { padding: 14px 14px 20px; }
+
+      /* Tables: contained scroll wrapper, smaller cells */
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; width: 100%; }
+      table { width: max-content; min-width: 100%; }
+      th { padding: 9px 10px; font-size: 9.5px; letter-spacing: 0.5px; white-space: nowrap; }
+      td { padding: 10px 10px; font-size: 12.5px; }
+
+      /* Stats: 2-col */
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-card { padding: 12px 14px; }
+      .stat-card .sval { font-size: 22px; }
+
+      /* Section header */
+      .section-header { margin-bottom: 16px; }
+      .section-header h2 { font-size: 19px; }
+
+      /* Forms: single column */
+      .form-row { grid-template-columns: 1fr; gap: 0; }
+
+      /* Period filter: scrollable row */
+      .period-filter { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+      .period-btn { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
+
+      /* Toolbar: stack on mobile */
+      .toolbar { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .toolbar-right { width: 100%; flex-wrap: wrap; }
+      .toolbar-right .btn { flex: 1; justify-content: center; }
+
+      /* Modals → bottom sheets */
+      .modal-overlay { align-items: flex-end; padding: 0; }
+      .modal { border-radius: 20px 20px 0 0; max-width: 100%; max-height: 90vh; }
+      .modal-footer { flex-direction: column-reverse; gap: 8px; }
+      .modal-footer .btn { width: 100%; justify-content: center; }
+
+      /* Dispensing */
+      .product-list { max-height: 240px; }
+      .cart-panel { position: static; margin-top: 14px; }
+      .dispense-layout, .opex-layout { gap: 14px; }
+
+      /* Toast repositioned above bottom tabs */
+      #toast { bottom: 76px; right: 14px; }
+
+      /* Upgrade CTA in content area */
+      .upgrade-cta { margin: 16px 0 0; border-radius: 12px; }
+      .mobile-only-cta { display: block; }
+    }
+
+    /* ── Very narrow phones (≤380px) ── */
+    @media (max-width: 380px) {
+      .page { padding: 12px 10px 16px; }
+      .stats-row { grid-template-columns: 1fr; gap: 8px; }
+      .stat-card .sval { font-size: 20px; }
+      .section-header h2 { font-size: 17px; letter-spacing: -0.4px; }
+      .toolbar-right .btn, .toolbar-left .btn { font-size: 11.5px; padding: 6px 10px; }
+      th { font-size: 9px; padding: 8px 8px; letter-spacing: 0.4px; }
+      td { font-size: 12px; padding: 9px 8px; }
+      .cart-panel { padding: 16px; }
+      .modal { padding: 22px 18px; border-radius: 18px 18px 0 0; }
+      .ci-qty-big { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════ ICON SPRITE ══════════════════════ -->
+<svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Dispensing: receipt -->
+    <symbol id="i-dispense" viewBox="0 0 24 24">
+      <path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21 5.5 19.5 4 21V4a1 1 0 0 1 1-1z"/>
+      <line x1="8" y1="8" x2="16" y2="8"/>
+      <line x1="8" y1="12" x2="14" y2="12"/>
+      <line x1="8" y1="16" x2="12" y2="16"/>
+    </symbol>
+    <!-- Inventory: box -->
+    <symbol id="i-inventory" viewBox="0 0 24 24">
+      <path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/>
+      <path d="M3 7l9 4 9-4"/>
+      <line x1="12" y1="11" x2="12" y2="21"/>
+    </symbol>
+    <!-- OPEX: chart bars -->
+    <symbol id="i-opex" viewBox="0 0 24 24">
+      <line x1="4" y1="20" x2="20" y2="20"/>
+      <rect x="6" y="12" width="3" height="8" rx="0.5"/>
+      <rect x="11" y="7" width="3" height="13" rx="0.5"/>
+      <rect x="16" y="14" width="3" height="6" rx="0.5"/>
+    </symbol>
+    <!-- Sparkle (guide) -->
+    <symbol id="i-sparkle" viewBox="0 0 24 24">
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
+    </symbol>
+    <!-- Help / question -->
+    <symbol id="i-help" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M9.5 9.5a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/>
+      <circle cx="12" cy="17" r="0.5" class="ic-fill"/>
+    </symbol>
+    <!-- Check -->
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <polyline points="5,12 10,17 19,7"/>
+    </symbol>
+    <!-- Check circle -->
+    <symbol id="i-check-circle" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"/>
+      <polyline points="8,12 11,15 16,9"/>
+    </symbol>
+    <!-- Close X -->
+    <symbol id="i-x" viewBox="0 0 24 24">
+      <line x1="6" y1="6" x2="18" y2="18"/>
+      <line x1="18" y1="6" x2="6" y2="18"/>
+    </symbol>
+    <!-- Plus -->
+    <symbol id="i-plus" viewBox="0 0 24 24">
+      <line x1="12" y1="5" x2="12" y2="19"/>
+      <line x1="5" y1="12" x2="19" y2="12"/>
+    </symbol>
+    <!-- Download (export) -->
+    <symbol id="i-download" viewBox="0 0 24 24">
+      <path d="M12 4v12"/>
+      <polyline points="7,11 12,16 17,11"/>
+      <path d="M5 20h14"/>
+    </symbol>
+    <!-- Upload (import) -->
+    <symbol id="i-upload" viewBox="0 0 24 24">
+      <path d="M12 16V4"/>
+      <polyline points="7,9 12,4 17,9"/>
+      <path d="M5 20h14"/>
+    </symbol>
+    <!-- Arrow right -->
+    <symbol id="i-arrow-right" viewBox="0 0 24 24">
+      <line x1="5" y1="12" x2="19" y2="12"/>
+      <polyline points="13,6 19,12 13,18"/>
+    </symbol>
+    <!-- Arrow left -->
+    <symbol id="i-arrow-left" viewBox="0 0 24 24">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="11,6 5,12 11,18"/>
+    </symbol>
+    <!-- Chevron down -->
+    <symbol id="i-chev-down" viewBox="0 0 24 24">
+      <polyline points="6,9 12,15 18,9"/>
+    </symbol>
+    <!-- Chevron up -->
+    <symbol id="i-chev-up" viewBox="0 0 24 24">
+      <polyline points="6,15 12,9 18,15"/>
+    </symbol>
+    <!-- Rocket (upgrade) -->
+    <symbol id="i-rocket" viewBox="0 0 24 24">
+      <path d="M14 4c4 0 6 2 6 6 0 5-7 11-7 11s-7-6-7-11c0-4 2-6 6-6 1 0 2 .3 2 .3z" transform="rotate(45 12 12)"/>
+      <circle cx="14.5" cy="9.5" r="1.6"/>
+      <path d="M5 19c-1 1-1 3-1 3s2 0 3-1"/>
+    </symbol>
+    <!-- Wave hand (welcome) -->
+    <symbol id="i-wave" viewBox="0 0 24 24">
+      <path d="M7 11V6a2 2 0 0 1 4 0v4"/>
+      <path d="M11 10V5a2 2 0 0 1 4 0v6"/>
+      <path d="M15 11V7a2 2 0 0 1 4 0v9a6 6 0 0 1-12 0v-3a2 2 0 0 1 4 0"/>
+    </symbol>
+    <!-- Compass (nav) -->
+    <symbol id="i-compass" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"/>
+      <polygon points="16,8 13,13 8,16 11,11" class="ic-fill"/>
+    </symbol>
+    <!-- Chart (stats) -->
+    <symbol id="i-chart" viewBox="0 0 24 24">
+      <line x1="4" y1="20" x2="20" y2="20"/>
+      <polyline points="4,15 9,10 13,14 20,6"/>
+      <circle cx="9" cy="10" r="1.4" class="ic-fill"/>
+      <circle cx="13" cy="14" r="1.4" class="ic-fill"/>
+      <circle cx="20" cy="6" r="1.4" class="ic-fill"/>
+    </symbol>
+    <!-- Search (magnifier) -->
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="6"/>
+      <line x1="20" y1="20" x2="15.5" y2="15.5"/>
+    </symbol>
+    <!-- Cart -->
+    <symbol id="i-cart" viewBox="0 0 24 24">
+      <path d="M3 4h2l2.5 12h11l2-8H6.5"/>
+      <circle cx="9" cy="20" r="1.5"/>
+      <circle cx="17" cy="20" r="1.5"/>
+    </symbol>
+    <!-- Calendar -->
+    <symbol id="i-calendar" viewBox="0 0 24 24">
+      <rect x="3.5" y="5" width="17" height="16" rx="2"/>
+      <line x1="3.5" y1="10" x2="20.5" y2="10"/>
+      <line x1="8" y1="3" x2="8" y2="7"/>
+      <line x1="16" y1="3" x2="16" y2="7"/>
+    </symbol>
+    <!-- Wallet -->
+    <symbol id="i-wallet" viewBox="0 0 24 24">
+      <rect x="3" y="6" width="18" height="14" rx="2"/>
+      <path d="M3 9h14a2 2 0 0 1 0 4H3"/>
+      <circle cx="17" cy="11" r="0.8" class="ic-fill"/>
+    </symbol>
+    <!-- Receipt with peso -->
+    <symbol id="i-receipt" viewBox="0 0 24 24">
+      <path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21 5.5 19.5 4 21V4a1 1 0 0 1 1-1z"/>
+      <path d="M9 8h4a2 2 0 0 1 0 4H9"/>
+      <line x1="9" y1="8" x2="9" y2="16"/>
+      <line x1="7" y1="11" x2="13" y2="11"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ══════════════════════ MOBILE HEADER ══════════════════════ -->
+<header class="mobile-header">
+  <img src="/icons/icon.svg" alt="RXaudit" class="mob-logo">
+  <div class="mob-header-text">
+    <span class="mob-title">RXaudit Starter</span>
+    <span class="mob-sub">Offline Pharmacy App</span>
+  </div>
+  <button type="button" class="mob-guide-btn" onclick="startTour()" aria-label="Open guided tour" title="How to use">
+    <svg class="ic ic-sm" style="stroke:white;"><use href="#i-help"/></svg>
+  </button>
+  <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&utm_medium=mobile_header" target="_blank" rel="noopener" class="mob-upgrade-btn">
+    Upgrade
+    <svg class="ic ic-sm" style="margin-left:2px;vertical-align:-3px;stroke:white;"><use href="#i-arrow-right"/></svg>
+  </a>
+</header>
+
+<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <img
+      src="/icons/icon.svg"
+      alt="RXaudit">
+    <div class="app-name">RXaudit Starter App</div>
+    <div class="app-sub">Offline Pharmacy MVP</div>
+  </div>
+
+  <nav class="sidebar-nav" data-tour="nav">
+    <div class="nav-label">Main Menu</div>
+
+    <div class="nav-item active" onclick="switchTab('dispensing')" data-tour="nav-dispensing">
+      <svg class="ic"><use href="#i-dispense"/></svg> Dispensing
+    </div>
+    <div class="nav-item" onclick="switchTab('inventory')" data-tour="nav-inventory">
+      <svg class="ic"><use href="#i-inventory"/></svg> Inventory
+    </div>
+    <div class="nav-item" onclick="switchTab('opex')" data-tour="nav-opex">
+      <svg class="ic"><use href="#i-opex"/></svg> OPEX
+    </div>
+  </nav>
+
+  <button class="guide-btn" onclick="startTour()" aria-label="Open guided tour">
+    <svg class="ic ic-sm"><use href="#i-sparkle"/></svg> How to Use
+  </button>
+
+  <div class="upgrade-cta">
+    <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
+    <div class="uc-sub">Multi-device sync, cloud backup, team access &amp; more.</div>
+    <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&amp;utm_medium=sidebar_cta" target="_blank" rel="noopener" class="uc-btn" onclick="trackUpgradeClick()">
+      Upgrade to RXaudit
+      <svg class="ic ic-sm" style="margin-left:4px;vertical-align:-3px;"><use href="#i-arrow-right"/></svg>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <svg class="rx-cross" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
+      <rect x="9" y="2" width="6" height="20" rx="1.5"/>
+      <rect x="2" y="9" width="20" height="6" rx="1.5"/>
+    </svg>
+    Data saved in browser
+  </div>
+</aside>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main class="main">
+<div class="page">
+
+  <!-- ════ DISPENSING ════ -->
+  <div id="panel-dispensing" class="panel active">
+    <div class="section-header">
+      <h2>Record Sale</h2>
+      <p>Search a product, add to cart, then dispense to auto-deduct stock.</p>
+    </div>
+
+    <div class="dispense-layout">
+      <!-- Product search -->
+      <div data-tour="product-search">
+        <div style="margin-bottom:10px;">
+          <input type="text" id="productSearch" placeholder="Search product by name or brand…" oninput="renderProductList()" style="width:100%;">
+        </div>
+        <div class="product-list" id="productList"></div>
+      </div>
+
+      <!-- Cart -->
+      <div class="cart-panel" data-tour="cart">
+        <h3 id="cartTitle">Cart</h3>
+        <div id="cartItems"><p class="cart-empty">Select a product from the list.</p></div>
+
+        <div id="cartFooter" style="display:none;">
+          <hr class="cart-divider">
+          <div class="cart-total-row">
+            <span>Total</span>
+            <span id="cartTotalAmt">₱0.00</span>
+          </div>
+          <label class="cust-label">Customer (optional)</label>
+          <input type="text" id="customerName" placeholder="Patient name…" style="width:100%;margin-bottom:10px;">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="dispenseCart()"><svg class="ic ic-sm"><use href="#i-check"/></svg> Dispense</button>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="clearCart()">Clear Cart</button>
+        </div>
+
+        <div id="cartEmptyFooter">
+          <hr class="cart-divider">
+          <label class="cust-label">Customer (optional)</label>
+          <input type="text" id="customerName2" placeholder="Patient name…" style="width:100%;margin-bottom:10px;">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;" disabled><svg class="ic ic-sm"><use href="#i-check"/></svg> Dispense</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction history -->
+    <div style="margin-top:28px;">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <strong style="font-size:15px;color:#1e0a47;">Transaction History</strong>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-secondary btn-sm" onclick="exportSalesCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Order #</th><th>Customer</th><th>Items</th>
+              <th class="text-right">Total</th><th style="width:50px;"></th>
+            </tr>
+          </thead>
+          <tbody id="salesTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ INVENTORY ════ -->
+  <div id="panel-inventory" class="panel">
+    <div class="section-header">
+      <h2>Inventory</h2>
+      <p>Manage products and stock levels.</p>
+    </div>
+
+    <div class="stats-row" id="invStats" data-tour="inv-stats"></div>
+
+    <div style="margin-bottom:10px;">
+      <input type="text" id="invSearch" placeholder="Search products…" oninput="renderInventory()" style="width:100%;">
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-left" data-tour="inv-toolbar">
+        <button class="btn btn-primary btn-sm" onclick="openInvModal()" data-tour="inv-add"><svg class="ic ic-sm"><use href="#i-plus"/></svg> Add Product</button>
+        <button class="btn btn-secondary btn-sm" onclick="openInvImportModal()"><svg class="ic ic-sm"><use href="#i-upload"/></svg> Import CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportInventoryCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Generic Name</th><th>Brand</th><th>Dosage</th><th>Category</th>
+            <th class="text-right">Qty</th><th class="text-right">SRP</th>
+            <th class="text-right">Cost</th><th>Expiry</th>
+            <th>Status</th><th style="width:90px;"></th>
+          </tr>
+        </thead>
+        <tbody id="invTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════ OPEX ════ -->
+  <div id="panel-opex" class="panel">
+    <div class="section-header">
+      <h2>Operating Expenses</h2>
+      <p>Track daily overhead and operational costs.</p>
+    </div>
+
+    <div class="period-filter" id="periodFilter" data-tour="opex-period">
+      <button class="period-btn" data-period="today">Today</button>
+      <button class="period-btn" data-period="yesterday">Yesterday</button>
+      <button class="period-btn" data-period="week">This Week</button>
+      <button class="period-btn active" data-period="month">This Month</button>
+      <button class="period-btn" data-period="all">All Time</button>
+    </div>
+
+    <div class="stats-row" id="opexStats" data-tour="opex-stats"></div>
+
+    <div class="opex-layout">
+      <!-- Sales log + Expense list -->
+      <div>
+        <!-- Sales Log (transactions) -->
+        <div class="toolbar">
+          <strong style="font-size:15px;color:#1e0a47;">Sales Log</strong>
+          <span id="salesLogCount" style="font-size:11px;color:#a78bfa;font-weight:600;"></span>
+        </div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th><th>Time</th><th>Order #</th><th>Customer</th>
+                <th class="text-right">Items</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody id="salesLogTable"></tbody>
+          </table>
+        </div>
+
+        <!-- Expense Log -->
+        <div class="toolbar">
+          <strong style="font-size:15px;color:#1e0a47;">Expense Log</strong>
+          <button class="btn btn-secondary btn-sm" onclick="exportExpensesCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th><th>Category</th><th>Description</th>
+                <th class="text-right">Amount</th><th style="width:50px;"></th>
+              </tr>
+            </thead>
+            <tbody id="expenseTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add form + summary -->
+      <div>
+        <div class="side-card" style="margin-bottom:14px;" data-tour="opex-add">
+          <h3>Add Expense</h3>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="expDate" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="expCategory" style="width:100%;">
+              <option>Utilities</option><option>Rent</option><option>Salary</option>
+              <option>Supplies</option><option>Maintenance</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input type="text" id="expDesc" placeholder="e.g. Meralco electric bill" style="width:100%;">
+          </div>
+          <div class="form-group">
+            <label>Amount (₱)</label>
+            <input type="number" id="expAmount" placeholder="0.00" min="0" step="0.01" style="width:100%;">
+          </div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addExpense()">Add Expense</button>
+        </div>
+
+        <div class="side-card">
+          <h3>Summary</h3>
+          <div id="expSummary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile-only upgrade CTA -->
+  <div class="upgrade-cta mobile-only-cta" style="margin-top:24px;">
+    <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
+    <div class="uc-sub">Multi-device sync, cloud backup, team access &amp; more.</div>
+    <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&utm_medium=content_cta" target="_blank" rel="noopener" class="uc-btn">
+      Upgrade to RXaudit
+      <svg class="ic ic-sm" style="margin-left:4px;vertical-align:-3px;"><use href="#i-arrow-right"/></svg>
+    </a>
+  </div>
+
+</div><!-- /page -->
+</main>
+
+<!-- ══════════════════════ INVENTORY MODAL ══════════════════════ -->
+<div class="modal-overlay" id="invModal" onclick="handleModalClick(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">
+    <h2 id="invModalTitle">Add Product</h2>
+    <input type="hidden" id="invEditId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Generic Name *</label>
+        <input type="text" id="invGenericName" placeholder="e.g. Amoxicillin">
+      </div>
+      <div class="form-group">
+        <label>Brand Name *</label>
+        <input type="text" id="invBrandName" placeholder="e.g. Amoxil">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Dosage</label>
+        <input type="text" id="invDosage" placeholder="e.g. 500mg">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="invCategory" placeholder="e.g. Medicine">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Batch No</label>
+        <input type="text" id="invBatchNo" placeholder="e.g. B2024-001">
+      </div>
+      <div class="form-group">
+        <label>Barcode</label>
+        <input type="text" id="invBarcode" placeholder="e.g. 4800092341234">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="invQty" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Reorder Level</label>
+        <input type="number" id="invReorder" placeholder="e.g. 10" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Price / SRP (₱) *</label>
+        <input type="number" id="invPrice" placeholder="0.00" min="0.01" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label>Cost / COGS (₱)</label>
+        <input type="number" id="invCost" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Expiry Date</label>
+        <input type="month" id="invExpiry">
+      </div>
+      <div class="form-group">
+        <label>Supplier</label>
+        <input type="text" id="invSupplier" placeholder="e.g. Unilab">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>RX Required</label>
+        <select id="invRxRequired">
+          <option value="No">No</option>
+          <option value="Yes">Yes</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Remarks</label>
+        <input type="text" id="invRemarks" placeholder="e.g. Antibiotic">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeInvModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ INVENTORY IMPORT MODAL ══════════════════════ -->
+<div class="modal-overlay" id="invImportModal" onclick="handleImportModalClick(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:640px;">
+    <h2>Import Inventory from CSV</h2>
+    <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#5b21b6;">
+      <strong>Expected columns:</strong>
+      <div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:11px;color:#6d28d9;margin-top:5px;line-height:1.6;">
+        Generic Name, Brand Name, Dosage, Batch No, Expiry Date, Quantity,<br>
+        Price (SRP), Cost (COGS), Supplier, Category, Reorder Level, RX Required, Barcode, Remarks
+      </div>
+      <div style="margin-top:8px;color:#7c3aed;font-size:11.5px;">
+        Only <strong>Generic Name</strong>, <strong>Brand Name</strong>, <strong>Quantity</strong>, and <strong>Price</strong> are required. The rest are optional.
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Select CSV file</label>
+      <input type="file" id="invImportFile" accept=".csv" onchange="handleInvImportFile(event)"
+        style="width:100%;padding:8px;border:1.5px solid #ddd6fe;border-radius:7px;background:white;">
+    </div>
+
+    <div id="invImportErrors" style="display:none;background:#fef3c7;border:1.5px solid #fde68a;border-radius:8px;padding:10px 12px;margin-top:10px;">
+      <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">Skipped rows:</div>
+      <ul id="invImportErrorList" style="font-size:11.5px;color:#78350f;padding-left:18px;max-height:80px;overflow-y:auto;"></ul>
+    </div>
+
+    <div id="invImportPreview" style="display:none;margin-top:14px;">
+      <div style="font-size:13px;font-weight:600;color:#1e0a47;margin-bottom:8px;">
+        <span id="invImportCount"></span>
+      </div>
+      <div class="table-wrap" style="max-height:260px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr><th>Generic</th><th>Brand</th><th>Dosage</th><th class="text-right">Qty</th><th class="text-right">Price</th></tr>
+          </thead>
+          <tbody id="invImportPreviewBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#4c1d95;cursor:pointer;">
+          <input type="checkbox" id="invImportReplace" style="width:auto;">
+          Replace existing inventory (clear current products first)
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeInvImportModal()">Cancel</button>
+      <button class="btn btn-primary" id="invImportConfirm" onclick="confirmInvImport()" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════ STORAGE ══════════════════
+const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses' };
+
+function dbLoad(key) {
+  try { return JSON.parse(localStorage.getItem(KEYS[key]) || '[]'); } catch { return []; }
+}
+function dbSave(key, data) {
+  localStorage.setItem(KEYS[key], JSON.stringify(data));
+}
+
+// ══════════════════ UTILS ══════════════════
+function uid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Generates a batch number like "B-20260423-A4F9"
+function genBatchNo() {
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `B-${stamp}-${suffix}`;
+}
+
+function peso(n) {
+  return '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = ''; }, 2800);
+}
+
+function downloadCSV(filename, headers, rows) {
+  const csv = [
+    headers.map(h => `"${h}"`).join(','),
+    ...rows.map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+  ].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: filename
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ══════════════════ SIDEBAR NAV ══════════════════
+const TAB_NAMES = ['dispensing', 'inventory', 'opex'];
+
+function switchTab(name) {
+  document.querySelectorAll('.nav-item').forEach((t, i) => {
+    t.classList.toggle('active', TAB_NAMES[i] === name);
+  });
+  TAB_NAMES.forEach(t => {
+    const el = document.getElementById('mobtab-' + t);
+    if (el) el.classList.toggle('active', t === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (name === 'dispensing') { renderProductList(); renderSales(); }
+  if (name === 'inventory')  { renderInventory(); }
+  if (name === 'opex')       { renderOpexStats(); renderSalesLog(); renderExpenses(); }
+}
+
+// ══════════════════ INVENTORY ══════════════════
+let invData = dbLoad('inv');
+
+// Backfill: auto-assign batch numbers to existing products that don't have one
+(() => {
+  let changed = false;
+  for (const p of invData) {
+    if (!p.batch_no || !p.batch_no.trim()) { p.batch_no = genBatchNo(); changed = true; }
+  }
+  if (changed) dbSave('inv', invData);
+})();
+
+function expiryStatus(expiry_date) {
+  if (!expiry_date) return null;
+  const exp = new Date(expiry_date + '-01');
+  const now = new Date(); now.setDate(1); now.setHours(0,0,0,0);
+  const diffMs = exp - now;
+  if (diffMs < 0) return 'expired';
+  if (diffMs < 90 * 86400000) return 'near';
+  return 'ok';
+}
+
+function renderInventory() {
+  const q = (document.getElementById('invSearch').value || '').toLowerCase();
+  const filtered = invData.filter(p =>
+    [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f || '').toLowerCase().includes(q))
+  );
+
+  const tb = document.getElementById('invTable');
+  if (!filtered.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="10">${invData.length ? 'No results found.' : 'No products yet. Click + Add Product to get started.'}</td></tr>`;
+  } else {
+    tb.innerHTML = filtered.map(p => {
+      const expStatus = expiryStatus(p.expiry_date);
+      let statusLabel, badgeClass;
+      if (p.qty <= 0)                    { statusLabel = 'Out of Stock'; badgeClass = 'badge-red'; }
+      else if (expStatus === 'expired')  { statusLabel = 'Expired';      badgeClass = 'badge-red'; }
+      else if (expStatus === 'near')     { statusLabel = 'Near Exp.';    badgeClass = 'badge-yellow'; }
+      else if (p.qty <= 10)              { statusLabel = 'Low Stock';    badgeClass = 'badge-yellow'; }
+      else                               { statusLabel = 'Good';         badgeClass = 'badge-green'; }
+
+      const qtyBadge = p.qty <= 0 ? 'badge-red' : (p.qty <= 10 ? 'badge-yellow' : 'badge-violet');
+
+      return `<tr>
+        <td><strong style="color:#1e0a47;">${esc(p.generic_name)}</strong></td>
+        <td style="color:#7c3aed;">${esc(p.brand_name)}</td>
+        <td style="color:#64748b;">${esc(p.dosage || 'N/A')}</td>
+        <td style="color:#64748b;">${esc(p.category || '—')}</td>
+        <td class="text-right"><span class="badge ${qtyBadge} font-mono">${p.qty}</span></td>
+        <td class="text-right font-mono" style="color:#1e0a47;font-weight:600;">${peso(p.price)}</td>
+        <td class="text-right font-mono" style="color:#a78bfa;">${p.cost ? peso(p.cost) : '—'}</td>
+        <td class="font-mono" style="color:#94a3b8;">${p.expiry_date || '—'}</td>
+        <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
+        <td>
+          <button class="btn btn-ghost btn-sm" onclick="openInvModal('${p.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Del</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  const outStock = invData.filter(p => p.qty <= 0).length;
+  const lowStock = invData.filter(p => p.qty > 0 && p.qty <= 10).length;
+  document.getElementById('invStats').innerHTML = `
+    <div class="stat-card">
+      <div class="slabel">Total Products</div>
+      <div class="sval">${invData.length}</div>
+    </div>
+    <div class="stat-card">
+      <div class="slabel">Low Stock</div>
+      <div class="sval ${lowStock > 0 ? 'yellow' : ''}">${lowStock}</div>
+    </div>
+    <div class="stat-card">
+      <div class="slabel">Out of Stock</div>
+      <div class="sval ${outStock > 0 ? 'red' : ''}">${outStock}</div>
+    </div>
+  `;
+}
+
+function openInvModal(id) {
+  if (id) {
+    const p = invData.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('invModalTitle').textContent = 'Edit Product';
+    document.getElementById('invEditId').value = id;
+    document.getElementById('invGenericName').value = p.generic_name;
+    document.getElementById('invBrandName').value = p.brand_name;
+    document.getElementById('invDosage').value = p.dosage === 'N/A' ? '' : (p.dosage || '');
+    document.getElementById('invCategory').value = p.category || '';
+    document.getElementById('invBatchNo').value = p.batch_no || '';
+    document.getElementById('invBarcode').value = p.barcode || '';
+    document.getElementById('invQty').value = p.qty;
+    document.getElementById('invReorder').value = p.reorder_level ?? '';
+    document.getElementById('invPrice').value = p.price;
+    document.getElementById('invCost').value = p.cost || '';
+    document.getElementById('invExpiry').value = p.expiry_date || '';
+    document.getElementById('invSupplier').value = p.supplier || '';
+    document.getElementById('invRxRequired').value = p.rx_required === 'Yes' ? 'Yes' : 'No';
+    document.getElementById('invRemarks').value = p.remarks || '';
+  } else {
+    document.getElementById('invModalTitle').textContent = 'Add Product';
+    document.getElementById('invEditId').value = '';
+    ['invGenericName','invBrandName','invDosage','invCategory','invBatchNo','invBarcode','invExpiry','invSupplier','invRemarks'].forEach(k => document.getElementById(k).value = '');
+    document.getElementById('invQty').value = 0;
+    document.getElementById('invReorder').value = '';
+    document.getElementById('invPrice').value = '';
+    document.getElementById('invCost').value = '';
+    document.getElementById('invRxRequired').value = 'No';
+  }
+  document.getElementById('invModal').classList.add('open');
+  setTimeout(() => document.getElementById('invGenericName').focus(), 80);
+}
+
+function closeInvModal() { document.getElementById('invModal').classList.remove('open'); }
+function handleModalClick(e) { if (e.target === e.currentTarget) closeInvModal(); }
+
+function saveProduct() {
+  const generic = document.getElementById('invGenericName').value.trim();
+  const brand   = document.getElementById('invBrandName').value.trim();
+  const priceRaw = document.getElementById('invPrice').value.trim();
+  if (!generic || !brand) { toast('Generic Name and Brand Name are required.', 'error'); return; }
+  if (priceRaw === '') { toast('Price (SRP) is required.', 'error'); return; }
+  const priceNum = parseFloat(priceRaw);
+  if (isNaN(priceNum) || priceNum <= 0) { toast('Price must be greater than 0.', 'error'); return; }
+
+  const id = document.getElementById('invEditId').value;
+  const existing = id ? invData.find(x => x.id === id) : null;
+
+  const reorderRaw = document.getElementById('invReorder').value;
+  const prod = {
+    id: id || uid(),
+    generic_name: generic,
+    brand_name: brand,
+    dosage: document.getElementById('invDosage').value.trim() || 'N/A',
+    batch_no: document.getElementById('invBatchNo').value.trim() || genBatchNo(),
+    expiry_date: document.getElementById('invExpiry').value || '',
+    qty: parseInt(document.getElementById('invQty').value) || 0,
+    price: priceNum,
+    cost: parseFloat(document.getElementById('invCost').value) || 0,
+    supplier: document.getElementById('invSupplier').value.trim(),
+    category: document.getElementById('invCategory').value.trim(),
+    reorder_level: reorderRaw === '' ? null : (parseInt(reorderRaw) || 0),
+    rx_required: document.getElementById('invRxRequired').value === 'Yes' ? 'Yes' : 'No',
+    barcode: document.getElementById('invBarcode').value.trim(),
+    remarks: document.getElementById('invRemarks').value.trim(),
+    created_at: existing ? existing.created_at : new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  if (id) {
+    const idx = invData.findIndex(x => x.id === id);
+    if (idx >= 0) invData[idx] = prod; else invData.push(prod);
+  } else {
+    invData.push(prod);
+  }
+
+  dbSave('inv', invData);
+  closeInvModal();
+  renderInventory();
+  renderProductList();
+  toast(id ? 'Product updated!' : 'Product added!');
+}
+
+function deleteProduct(id) {
+  if (!confirm('Delete this product? This cannot be undone.')) return;
+  invData = invData.filter(x => x.id !== id);
+  dbSave('inv', invData);
+  renderInventory();
+  renderProductList();
+  toast('Product deleted.');
+}
+
+// ══════════════════ INVENTORY IMPORT ══════════════════
+let invImportBuffer = [];
+
+function openInvImportModal() {
+  invImportBuffer = [];
+  document.getElementById('invImportFile').value = '';
+  document.getElementById('invImportPreview').style.display = 'none';
+  document.getElementById('invImportErrors').style.display = 'none';
+  document.getElementById('invImportReplace').checked = false;
+  document.getElementById('invImportConfirm').disabled = true;
+  document.getElementById('invImportModal').classList.add('open');
+}
+
+function closeInvImportModal() {
+  document.getElementById('invImportModal').classList.remove('open');
+}
+
+function handleImportModalClick(e) {
+  if (e.target === e.currentTarget) closeInvImportModal();
+}
+
+function parseCSVText(text) {
+  const rows = [];
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cols = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
+        else { inQuote = !inQuote; }
+      } else if (ch === ',' && !inQuote) { cols.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur.trim());
+    rows.push(cols);
+  }
+  return rows;
+}
+
+function findColIdx(headers, aliases) {
+  const normalized = headers.map(h => h.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim());
+  for (let i = 0; i < normalized.length; i++) {
+    if (aliases.some(a => normalized[i] === a || normalized[i].includes(a) || a.includes(normalized[i]))) return i;
+  }
+  return -1;
+}
+
+function handleInvImportFile(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const errors = [];
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const rows = parseCSVText(ev.target?.result || '');
+    if (rows.length < 2) {
+      errors.push('File is empty or has no data rows.');
+      showImportErrors(errors);
+      return;
+    }
+
+    const headers = rows[0];
+    const col = (aliases) => findColIdx(headers, aliases);
+    const idx = {
+      generic:   col(['generic name','generic','generic_name','gamot']),
+      brand:     col(['brand name','brand','brand_name','tatak']),
+      dosage:    col(['dosage','dose','dosis','strength','lakas']),
+      batch:     col(['batch no','batch','batch_no','batch number']),
+      expiry:    col(['expiry date','expiry','expiration','paso','exp date']),
+      qty:       col(['quantity','qty','bilang','stock']),
+      price:     col(['price srp','price','srp','halaga','unit price']),
+      cost:      col(['cost cogs','cost','cogs','puhunan']),
+      supplier:  col(['supplier','distributor','vendor']),
+      category:  col(['category','kategorya','type']),
+      reorder:   col(['reorder level','reorder','reorder_level','minimum stock']),
+      rx:        col(['rx required','rx','prescription','requires prescription']),
+      barcode:   col(['barcode','bar code','sku']),
+      remarks:   col(['remarks','notes','note','memo','comments']),
+    };
+
+    if (idx.generic === -1 || idx.brand === -1 || idx.qty === -1 || idx.price === -1) {
+      errors.push('Missing required columns. Need at least: Generic Name, Brand Name, Quantity, Price (SRP).');
+      showImportErrors(errors);
+      return;
+    }
+
+    const parsed = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const generic = (r[idx.generic] || '').trim();
+      const brand   = (r[idx.brand]   || '').trim();
+      const qty     = parseInt(r[idx.qty]);
+      const price   = parseFloat(r[idx.price]);
+
+      if (!generic || !brand) { errors.push(`Row ${i + 1}: missing generic or brand name.`); continue; }
+      if (isNaN(qty) || qty < 0) { errors.push(`Row ${i + 1}: invalid quantity.`); continue; }
+      if (isNaN(price) || price < 0) { errors.push(`Row ${i + 1}: invalid price.`); continue; }
+
+      const reorderRaw = idx.reorder >= 0 ? (r[idx.reorder] || '').trim() : '';
+      const rxRaw = idx.rx >= 0 ? (r[idx.rx] || 'No').trim().toLowerCase() : 'no';
+      const rxVal = (rxRaw === 'yes' || rxRaw === 'y' || rxRaw === 'true' || rxRaw === '1') ? 'Yes' : 'No';
+
+      parsed.push({
+        id: uid(),
+        generic_name: generic,
+        brand_name:   brand,
+        dosage:       (idx.dosage   >= 0 ? r[idx.dosage]   : '').trim() || 'N/A',
+        batch_no:     ((idx.batch    >= 0 ? r[idx.batch]    : '').trim()) || genBatchNo(),
+        expiry_date:  (idx.expiry   >= 0 ? r[idx.expiry]   : '').trim(),
+        qty,
+        price,
+        cost:         idx.cost     >= 0 ? (parseFloat(r[idx.cost]) || 0) : 0,
+        supplier:     (idx.supplier >= 0 ? r[idx.supplier] : '').trim(),
+        category:     (idx.category >= 0 ? r[idx.category] : '').trim(),
+        reorder_level: reorderRaw === '' ? null : (parseInt(reorderRaw) || 0),
+        rx_required:  rxVal,
+        barcode:      (idx.barcode  >= 0 ? r[idx.barcode]  : '').trim(),
+        remarks:      (idx.remarks  >= 0 ? r[idx.remarks]  : '').trim(),
+        created_at:   new Date().toISOString(),
+        updated_at:   new Date().toISOString(),
+      });
+    }
+
+    invImportBuffer = parsed;
+    showImportErrors(errors);
+    renderImportPreview();
+  };
+  reader.readAsText(file);
+}
+
+function showImportErrors(errs) {
+  const wrap = document.getElementById('invImportErrors');
+  const list = document.getElementById('invImportErrorList');
+  if (!errs.length) { wrap.style.display = 'none'; return; }
+  list.innerHTML = errs.map(e => `<li>${esc(e)}</li>`).join('');
+  wrap.style.display = '';
+}
+
+function renderImportPreview() {
+  const wrap = document.getElementById('invImportPreview');
+  const body = document.getElementById('invImportPreviewBody');
+  const countEl = document.getElementById('invImportCount');
+  const btn = document.getElementById('invImportConfirm');
+
+  if (!invImportBuffer.length) {
+    wrap.style.display = 'none';
+    btn.disabled = true;
+    return;
+  }
+
+  countEl.textContent = `${invImportBuffer.length} product${invImportBuffer.length !== 1 ? 's' : ''} ready to import:`;
+  body.innerHTML = invImportBuffer.slice(0, 8).map(p => `
+    <tr>
+      <td><strong style="color:#1e0a47;">${esc(p.generic_name)}</strong></td>
+      <td style="color:#7c3aed;">${esc(p.brand_name)}</td>
+      <td style="color:#64748b;">${esc(p.dosage)}</td>
+      <td class="text-right font-mono">${p.qty}</td>
+      <td class="text-right font-mono">${peso(p.price)}</td>
+    </tr>
+  `).join('') + (invImportBuffer.length > 8
+    ? `<tr><td colspan="5" style="text-align:center;color:#a78bfa;font-size:11px;padding:8px;">...and ${invImportBuffer.length - 8} more</td></tr>`
+    : '');
+
+  wrap.style.display = '';
+  btn.disabled = false;
+}
+
+function confirmInvImport() {
+  if (!invImportBuffer.length) return;
+  const replace = document.getElementById('invImportReplace').checked;
+  if (replace) {
+    if (!confirm(`Replace all ${invData.length} existing products with ${invImportBuffer.length} imported products? This cannot be undone.`)) return;
+    invData = [];
+  }
+  invData.push(...invImportBuffer);
+  dbSave('inv', invData);
+  const n = invImportBuffer.length;
+  closeInvImportModal();
+  renderInventory();
+  renderProductList();
+  toast(`Imported ${n} product${n !== 1 ? 's' : ''}!`);
+}
+
+function exportInventoryCSV() {
+  if (!invData.length) { toast('No products to export.', 'error'); return; }
+  downloadCSV(
+    `inventory_${today()}.csv`,
+    ['Generic Name','Brand Name','Dosage','Batch No','Expiry Date','Quantity','Price (SRP)','Cost (COGS)','Supplier','Category','Reorder Level','RX Required','Barcode','Remarks'],
+    invData.map(p => [
+      p.generic_name,
+      p.brand_name,
+      p.dosage || 'N/A',
+      p.batch_no || '',
+      p.expiry_date || '',
+      p.qty,
+      p.price,
+      p.cost || 0,
+      p.supplier || '',
+      p.category || '',
+      p.reorder_level ?? '',
+      p.rx_required || 'No',
+      p.barcode || '',
+      p.remarks || '',
+    ])
+  );
+  toast('Inventory CSV downloaded!');
+}
+
+// ══════════════════ DISPENSING ══════════════════
+let cart = [];
+let salesData = dbLoad('sales');
+
+function getCustomerName() {
+  const f = document.getElementById('cartFooter');
+  if (f && f.style.display !== 'none') return document.getElementById('customerName').value.trim();
+  return document.getElementById('customerName2').value.trim();
+}
+
+function renderProductList() {
+  const q = (document.getElementById('productSearch').value || '').toLowerCase();
+  const products = invData
+    .filter(p => p.qty > 0 && [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f||'').toLowerCase().includes(q)))
+    .sort((a, b) => a.generic_name.localeCompare(b.generic_name));
+
+  const el = document.getElementById('productList');
+  if (!products.length) {
+    const msg = invData.filter(p => p.qty > 0).length === 0
+      ? 'No products in inventory. Go to Inventory tab to add products.'
+      : 'No matching products found.';
+    el.innerHTML = `<div style="padding:28px;text-align:center;color:#c4b5fd;font-size:13px;">${msg}</div>`;
+    return;
+  }
+  el.innerHTML = products.map(p => {
+    const inCart = cart.some(c => c.product_id === p.id);
+    return `<div class="product-item ${inCart ? 'in-cart' : ''}" onclick="addToCart('${p.id}')">
+      <div class="pname">${esc(p.generic_name)} <span class="pbrand">${esc(p.brand_name)}</span></div>
+      <div class="pmeta">
+        ${esc(p.dosage || 'N/A')} &nbsp;·&nbsp; ${peso(p.price)}/unit
+        &nbsp;·&nbsp; <span class="${p.qty <= 10 ? 'pout' : 'pstock'}">Stock: ${p.qty}</span>
+        ${inCart ? '&nbsp;<span class="pin-cart"><svg class="ic ic-sm" style="vertical-align:-2px;"><use href="#i-check"/></svg> In cart</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addToCart(id) {
+  const p = invData.find(x => x.id === id);
+  if (!p || p.qty <= 0) { toast('Out of stock!', 'error'); return; }
+  const existing = cart.find(c => c.product_id === id);
+  if (existing) {
+    if (existing.qty < p.qty) { existing.qty++; }
+    else { toast(`Only ${p.qty} in stock!`, 'error'); return; }
+  } else {
+    cart.push({ product_id: id, generic_name: p.generic_name, brand_name: p.brand_name, dosage: p.dosage || 'N/A', qty: 1, price: p.price });
+  }
+  renderCart();
+  renderProductList();
+}
+
+function updateCartQty(id, val) {
+  const p = invData.find(x => x.id === id);
+  const item = cart.find(c => c.product_id === id);
+  if (!item || !p) return;
+  const newQty = parseInt(val) || 0;
+  if (newQty <= 0) { removeFromCart(id); return; }
+  if (newQty > p.qty) { toast(`Only ${p.qty} in stock!`, 'error'); item.qty = p.qty; }
+  else { item.qty = newQty; }
+  renderCart();
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(c => c.product_id !== id);
+  renderCart();
+  renderProductList();
+}
+
+function clearCart() {
+  cart = [];
+  renderCart();
+  renderProductList();
+}
+
+function renderCart() {
+  const itemsEl   = document.getElementById('cartItems');
+  const footerEl  = document.getElementById('cartFooter');
+  const emptyFtEl = document.getElementById('cartEmptyFooter');
+
+  const totalItems = cart.reduce((s, c) => s + c.qty, 0);
+  document.getElementById('cartTitle').textContent = cart.length
+    ? `Cart · ${totalItems} item${totalItems !== 1 ? 's' : ''}`
+    : 'Cart';
+
+  if (!cart.length) {
+    itemsEl.innerHTML = '<p class="cart-empty">Select a product from the list.</p>';
+    footerEl.style.display = 'none';
+    emptyFtEl.style.display = '';
+    return;
+  }
+
+  itemsEl.innerHTML = cart.map(item => `
+    <div class="cart-item">
+      <div class="ci-left">
+        <div class="ci-name">${esc(item.generic_name)}${item.brand_name ? ` <span style="font-weight:500;color:#8b5cf6;">(${esc(item.brand_name)})</span>` : ''}</div>
+        ${item.dosage && item.dosage !== 'N/A' ? `<div class="ci-detail">Dosage: ${esc(item.dosage)}</div>` : ''}
+        <div class="ci-subtotal">${peso(item.price * item.qty)} <span class="ci-unit">· ${peso(item.price)}/unit</span></div>
+      </div>
+      <div class="ci-right">
+        <span class="ci-qty-label">QTY</span>
+        <div class="ci-qty-big">${item.qty}</div>
+        <div class="ci-qty-controls">
+          <button class="qty-btn" onclick="updateCartQty('${item.product_id}', ${item.qty - 1})">−</button>
+          <button class="qty-btn" onclick="updateCartQty('${item.product_id}', ${item.qty + 1})">+</button>
+        </div>
+      </div>
+      <button class="ci-remove" onclick="removeFromCart('${item.product_id}')" title="Remove"><svg class="ic ic-sm"><use href="#i-x"/></svg></button>
+    </div>
+  `).join('');
+
+  const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  document.getElementById('cartTotalAmt').textContent = peso(total);
+  footerEl.style.display = '';
+  emptyFtEl.style.display = 'none';
+}
+
+function dispenseCart() {
+  if (!cart.length) { toast('Cart is empty!', 'error'); return; }
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const orderNum = `ORD-${now.getFullYear().toString().slice(-2)}${pad(now.getMonth()+1)}${pad(now.getDate())}-${String(Date.now()).slice(-4)}`;
+  const customer = getCustomerName();
+  const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+
+  for (const item of cart) {
+    const p = invData.find(x => x.id === item.product_id);
+    if (p) p.qty = Math.max(0, p.qty - item.qty);
+  }
+  dbSave('inv', invData);
+
+  const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const tx = {
+    id: uid(), date: today(), time, order_number: orderNum,
+    customer, items: cart.map(c => ({ ...c })),
+    total, created_at: now.toISOString(),
+  };
+  salesData.unshift(tx);
+  dbSave('sales', salesData);
+
+  cart = [];
+  document.getElementById('customerName').value = '';
+  document.getElementById('customerName2').value = '';
+  renderCart();
+  renderSales();
+  renderProductList();
+  renderOpexStats();
+  renderSalesLog();
+  toast(`Dispensed ${orderNum} — ${peso(total)}`);
+}
+
+function renderSales() {
+  const tb = document.getElementById('salesTable');
+  if (!salesData.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="6">No transactions yet.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = salesData.map(tx => `<tr>
+    <td class="font-mono" style="color:#94a3b8;">${esc(tx.date)}</td>
+    <td class="font-mono" style="color:#7c3aed;font-weight:700;">${esc(tx.order_number)}</td>
+    <td>${esc(tx.customer || '—')}</td>
+    <td style="font-size:12px;color:#c4b5fd;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+      ${esc(tx.items.map(i => `${i.generic_name} ×${i.qty}`).join(', '))}
+    </td>
+    <td class="text-right font-mono" style="font-weight:700;color:#1e0a47;">${peso(tx.total)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteTransaction('${tx.id}')">Del</button></td>
+  </tr>`).join('');
+}
+
+function deleteTransaction(id) {
+  if (!confirm('Delete this transaction?\n\nNote: Stock will NOT be restored automatically.')) return;
+  salesData = salesData.filter(x => x.id !== id);
+  dbSave('sales', salesData);
+  renderSales();
+  renderSalesLog();
+  renderOpexStats();
+  toast('Transaction deleted.');
+}
+
+function exportSalesCSV() {
+  if (!salesData.length) { toast('No transactions to export.', 'error'); return; }
+  const rows = [];
+  for (const tx of salesData) {
+    for (const item of tx.items) {
+      rows.push([tx.date, tx.order_number, tx.customer || '', item.generic_name, item.brand_name, item.dosage || 'N/A', item.qty, item.price, item.qty * item.price]);
+    }
+  }
+  downloadCSV(`sales_${today()}.csv`,
+    ['Date', 'Order Number', 'Customer', 'Generic Name', 'Brand Name', 'Dosage', 'Qty', 'Price', 'Total'],
+    rows);
+  toast('Sales CSV downloaded!');
+}
+
+// ══════════════════ OPEX ══════════════════
+let expData = dbLoad('exp');
+let opexPeriod = 'month';        // today | yesterday | week | month | all
+let salesLogLimit = 10;
+let expenseLogLimit = 10;
+
+function periodRange(period) {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const startOfDay = new Date(y, m, d);
+  const ymd = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+
+  if (period === 'today')     return { from: ymd(startOfDay), to: ymd(startOfDay), label: 'Today' };
+  if (period === 'yesterday') { const y1 = new Date(y, m, d-1); return { from: ymd(y1), to: ymd(y1), label: 'Yesterday' }; }
+  if (period === 'week') {
+    // Monday-start week
+    const day = startOfDay.getDay(); // 0 Sun..6 Sat
+    const diff = (day === 0 ? 6 : day - 1);
+    const weekStart = new Date(y, m, d - diff);
+    return { from: ymd(weekStart), to: ymd(startOfDay), label: 'This Week' };
+  }
+  if (period === 'month') {
+    const monthStart = new Date(y, m, 1);
+    return { from: ymd(monthStart), to: ymd(startOfDay), label: 'This Month' };
+  }
+  return { from: null, to: null, label: 'All Time' };
+}
+
+function filterByPeriod(items, period) {
+  const { from, to } = periodRange(period);
+  if (!from) return items;
+  return items.filter(x => x.date >= from && x.date <= to);
+}
+
+function setOpexPeriod(p) {
+  opexPeriod = p;
+  salesLogLimit = 10;
+  expenseLogLimit = 10;
+  document.querySelectorAll('#periodFilter .period-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.period === p);
+  });
+  renderOpexStats();
+  renderSalesLog();
+  renderExpenses();
+}
+
+function renderOpexStats() {
+  const el = document.getElementById('opexStats');
+  if (!el) return;
+  const { label } = periodRange(opexPeriod);
+  const sales = filterByPeriod(salesData, opexPeriod);
+  const exps  = filterByPeriod(expData, opexPeriod);
+  const grossSales  = sales.reduce((s, t) => s + Number(t.total || 0), 0);
+  const totalExp    = exps.reduce((s, e) => s + Number(e.amount || 0), 0);
+  const netProfit   = grossSales - totalExp;
+  const profitColor = netProfit >= 0 ? '#059669' : '#dc2626';
+  el.innerHTML = `
+    <div class="stat-card">
+      <div class="slabel">Gross Sales <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
+      <div class="sval" style="font-size:20px;color:#1e0a47;">${peso(grossSales)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="slabel">Expenses <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
+      <div class="sval red" style="font-size:20px;">${peso(totalExp)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="slabel">Net Profit <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
+      <div class="sval" style="font-size:20px;color:${profitColor};">${peso(netProfit)}</div>
+    </div>
+  `;
+}
+
+function trackUpgradeClick() {
+  try {
+    const prev = Number(localStorage.getItem('rxmvp_upgrade_clicks') || '0');
+    localStorage.setItem('rxmvp_upgrade_clicks', String(prev + 1));
+    localStorage.setItem('rxmvp_upgrade_last', new Date().toISOString());
+  } catch {}
+}
+
+function addExpense() {
+  const date   = document.getElementById('expDate').value;
+  const cat    = document.getElementById('expCategory').value;
+  const desc   = document.getElementById('expDesc').value.trim();
+  const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+
+  if (!date)       { toast('Date is required.', 'error'); return; }
+  if (!desc)       { toast('Description is required.', 'error'); return; }
+  if (amount <= 0) { toast('Amount must be greater than 0.', 'error'); return; }
+
+  expData.push({ id: uid(), date, category: cat, description: desc, amount, created_at: new Date().toISOString() });
+  dbSave('exp', expData);
+  document.getElementById('expDesc').value = '';
+  document.getElementById('expAmount').value = '';
+  renderExpenses();
+  renderOpexStats();
+  toast('Expense added!');
+}
+
+function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  expData = expData.filter(x => x.id !== id);
+  dbSave('exp', expData);
+  renderExpenses();
+  renderOpexStats();
+  toast('Expense deleted.');
+}
+
+function renderSalesLog() {
+  const tb = document.getElementById('salesLogTable');
+  const countEl = document.getElementById('salesLogCount');
+  if (!tb) return;
+
+  const filtered = filterByPeriod(salesData, opexPeriod);
+  const sorted   = [...filtered].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+  const totalCount   = sorted.length;
+  const totalRevenue = sorted.reduce((s, t) => s + Number(t.total || 0), 0);
+
+  if (countEl) {
+    countEl.textContent = totalCount ? `${totalCount} transaction${totalCount !== 1 ? 's' : ''} · ${peso(totalRevenue)}` : '';
+  }
+
+  if (!sorted.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="5">No sales in this period.</td></tr>`;
+    return;
+  }
+
+  const visible = sorted.slice(0, salesLogLimit);
+  let html = visible.map(t => `
+    <tr>
+      <td class="font-mono" style="color:#94a3b8;">${esc(t.date)}</td>
+      <td class="font-mono" style="color:#c4b5fd;font-size:12px;">${esc(t.time || '—')}</td>
+      <td class="font-mono" style="color:#7c3aed;font-weight:600;">${esc(t.order_number)}</td>
+      <td>${esc(t.customer || 'Walk-in Customer')}</td>
+      <td class="text-right" style="color:#4c1d95;">${t.items.length}</td>
+      <td class="text-right font-mono" style="font-weight:700;color:#059669;">${peso(t.total)}</td>
+    </tr>
+  `).join('');
+
+  if (sorted.length > salesLogLimit) {
+    const remaining = sorted.length - salesLogLimit;
+    html += `<tr class="see-more-row"><td colspan="5">
+      <button class="see-more-btn" onclick="salesLogLimit += 10; renderSalesLog();">
+        See more (${remaining} remaining) <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-down"/></svg>
+      </button>
+    </td></tr>`;
+  } else if (salesLogLimit > 10 && sorted.length > 10) {
+    html += `<tr class="see-more-row"><td colspan="5">
+      <button class="see-more-btn" onclick="salesLogLimit = 10; renderSalesLog();">
+        Show less <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-up"/></svg>
+      </button>
+    </td></tr>`;
+  }
+  tb.innerHTML = html;
+}
+
+function renderExpenses() {
+  const filtered = filterByPeriod(expData, opexPeriod);
+  const sorted = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+  const tb = document.getElementById('expenseTable');
+
+  if (!sorted.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="5">No expenses in this period.</td></tr>`;
+  } else {
+    const visible = sorted.slice(0, expenseLogLimit);
+    let html = visible.map(e => `<tr>
+      <td class="font-mono" style="color:#94a3b8;">${esc(e.date)}</td>
+      <td><span class="badge badge-violet">${esc(e.category)}</span></td>
+      <td>${esc(e.description)}</td>
+      <td class="text-right font-mono" style="font-weight:600;color:#1e0a47;">${peso(e.amount)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">Del</button></td>
+    </tr>`).join('');
+
+    if (sorted.length > expenseLogLimit) {
+      const remaining = sorted.length - expenseLogLimit;
+      html += `<tr class="see-more-row"><td colspan="5">
+        <button class="see-more-btn" onclick="expenseLogLimit += 10; renderExpenses();">
+          See more (${remaining} remaining) <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-down"/></svg>
+        </button>
+      </td></tr>`;
+    } else if (expenseLogLimit > 10 && sorted.length > 10) {
+      html += `<tr class="see-more-row"><td colspan="5">
+        <button class="see-more-btn" onclick="expenseLogLimit = 10; renderExpenses();">
+          Show less <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-up"/></svg>
+        </button>
+      </td></tr>`;
+    }
+    tb.innerHTML = html;
+  }
+
+  // Summary breakdown (uses filtered data for consistency with period)
+  const byCategory = {};
+  for (const e of filtered) byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount);
+  const total = Object.values(byCategory).reduce((s, v) => s + v, 0);
+  const summaryEl = document.getElementById('expSummary');
+
+  if (!Object.keys(byCategory).length) {
+    summaryEl.innerHTML = '<p class="summary-empty">No expenses in this period.</p>';
+  } else {
+    const rows = Object.entries(byCategory)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat, amt]) => `<div class="summary-row"><span>${esc(cat)}</span><span class="font-mono">${peso(amt)}</span></div>`)
+      .join('');
+    summaryEl.innerHTML = `${rows}
+      <div class="summary-row">
+        <span>Total OPEX</span>
+        <span class="font-mono" style="color:#dc2626;">${peso(total)}</span>
+      </div>`;
+  }
+}
+
+function exportExpensesCSV() {
+  if (!expData.length) { toast('No expenses to export.', 'error'); return; }
+  const sorted = [...expData].sort((a, b) => a.date.localeCompare(b.date));
+  downloadCSV(`expenses_${today()}.csv`,
+    ['Date', 'Category', 'Description', 'Amount'],
+    sorted.map(e => [e.date, e.category, e.description, e.amount]));
+  toast('Expenses CSV downloaded!');
+}
+
+// ══════════════════ INIT ══════════════════
+document.getElementById('expDate').value = today();
+document.querySelectorAll('#periodFilter .period-btn').forEach(btn => {
+  btn.addEventListener('click', () => setOpexPeriod(btn.dataset.period));
+});
+renderProductList();
+renderSales();
+renderOpexStats();
+renderSalesLog();
+renderExpenses();
+
+// ══════════════════ GUIDED TOUR (spotlight) ══════════════════
+const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
+const TOUR_STEPS = [
+  {
+    target: null,
+    icon: 'i-wave',
+    title: 'Welcome to RXaudit',
+    body: 'Your offline-first pharmacy companion. Lahat ng data, naka-save sa device mo (localStorage) — walang signup, walang cloud.',
+    tip: 'You can reopen this tour anytime via the <strong>How to Use</strong> button in the sidebar.'
+  },
+  {
+    target: () => visibleEl('[data-tour="mob-nav"]', '[data-tour="nav"]'),
+    goTab: 'inventory',
+    icon: 'i-compass',
+    title: 'Main Navigation',
+    body: 'Three sections: <strong>Dispensing</strong> for sales, <strong>Inventory</strong> for stock, <strong>OPEX</strong> for expenses. On mobile these live at the bottom of the screen.',
+    tip: 'Tap any item to switch — your data stays in sync across tabs.'
+  },
+  {
+    target: '[data-tour="inv-add"]',
+    goTab: 'inventory',
+    icon: 'i-plus',
+    title: 'Add Your Products',
+    body: 'Click <strong>Add Product</strong> to register a new item — generic name, brand, dosage, stock, price, expiry. Magsimula ka dito kasi kapag walang produkto, walang ibebenta sa Dispensing tab.',
+    tip: 'May existing list ka na? Use <strong>Import CSV</strong> sa tabi para bulk upload.'
+  },
+  {
+    target: '[data-tour="inv-stats"]',
+    goTab: 'inventory',
+    icon: 'i-chart',
+    title: 'Inventory At-a-Glance',
+    body: 'These cards show <strong>total products, low-stock alerts,</strong> and <strong>expiring items</strong>. The badges in the table update automatically when stock dips or expiry nears.',
+    tip: 'Low-stock threshold = 10 units by default.'
+  },
+  {
+    target: '[data-tour="product-search"]',
+    goTab: 'dispensing',
+    icon: 'i-search',
+    title: 'Search & Pick Products',
+    body: 'On the Dispensing tab, type the generic or brand name here. <strong>Tap a product</strong> to add it to the cart. Stock auto-deducts on dispense.',
+    tip: 'Out-of-stock items show in red and can\'t be added.'
+  },
+  {
+    target: '[data-tour="cart"]',
+    goTab: 'dispensing',
+    icon: 'i-cart',
+    title: 'Cart & Dispense',
+    body: 'Review items, adjust quantity with <strong>+ / −</strong>, optionally add a customer name, then hit <strong>Dispense</strong> to record the sale.',
+    tip: 'Customer name is optional — leave blank for walk-ins.'
+  },
+  {
+    target: '[data-tour="opex-period"]',
+    goTab: 'opex',
+    icon: 'i-calendar',
+    title: 'Filter by Period',
+    body: 'Switch between <strong>Today, Yesterday, Week, Month,</strong> or <strong>All Time</strong>. All stats and logs update instantly.',
+    tip: 'Default view is "This Month" — good for monthly P&L.'
+  },
+  {
+    target: '[data-tour="opex-stats"]',
+    goTab: 'opex',
+    icon: 'i-chart',
+    title: 'Revenue · Expenses · Net',
+    body: 'See your <strong>real margin</strong> here. Revenue comes from Dispensing, Expenses from the form on the right. Net = Revenue − Expenses.',
+    tip: 'If Net is red, you\'re running at a loss for that period.'
+  },
+  {
+    target: '[data-tour="opex-add"]',
+    goTab: 'opex',
+    icon: 'i-wallet',
+    title: 'Log an Expense',
+    body: 'Track rent, utilities, supplies, salaries, etc. Pick a category, type the description, set the amount — done. Bawat gastos, ilagay mo dito.',
+    tip: 'Export Expenses CSV anytime para sa accountant mo.'
+  },
+  {
+    target: null,
+    icon: 'i-rocket',
+    title: 'You\'re all set!',
+    body: 'Start by adding a product on the <strong>Inventory</strong> tab, then record your first sale. Data saves automatically — pero <strong>clear browser data = lose everything</strong>, so export CSVs as backup.',
+    tip: 'Need cloud sync & multi-device? Check the <strong>Upgrade</strong> link.'
+  }
+];
+
+let tourIdx = 0;
+let tourActive = false;
+
+const tourEls = {
+  card: () => document.getElementById('tourCard'),
+  spotlight: () => document.getElementById('tourSpotlight'),
+  dims: () => [
+    document.getElementById('tourDimTop'),
+    document.getElementById('tourDimBottom'),
+    document.getElementById('tourDimLeft'),
+    document.getElementById('tourDimRight')
+  ]
+};
+
+function startTour() {
+  tourIdx = 0;
+  tourActive = true;
+  showTourLayer(true);
+  renderTourStep();
+}
+
+function closeTour() {
+  tourActive = false;
+  showTourLayer(false);
+  localStorage.setItem(TOUR_SEEN_KEY, '1');
+}
+
+function showTourLayer(on) {
+  tourEls.dims().forEach(d => d.classList.toggle('show', on));
+  tourEls.spotlight().classList.toggle('show', on);
+  tourEls.card().classList.toggle('show', on);
+}
+
+function nextTour() {
+  if (tourIdx < TOUR_STEPS.length - 1) { tourIdx++; renderTourStep(); }
+  else { closeTour(); toast('Tutorial complete — happy dispensing!'); }
+}
+function prevTour() {
+  if (tourIdx > 0) { tourIdx--; renderTourStep(); }
+}
+
+function renderTourStep() {
+  const step = TOUR_STEPS[tourIdx];
+  const isFirst = tourIdx === 0;
+  const isLast  = tourIdx === TOUR_STEPS.length - 1;
+
+  // Switch tab first if needed, then position after layout settles
+  if (step.goTab && document.getElementById('panel-' + step.goTab)) {
+    switchTab(step.goTab);
+  }
+
+  document.getElementById('tourPill').innerHTML =
+    `<span class="dot"></span>Step ${tourIdx + 1} of ${TOUR_STEPS.length}`;
+  document.getElementById('tourEmoji').innerHTML =
+    `<svg class="ic ic-lg" style="stroke:white;"><use href="#${step.icon}"/></svg>`;
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourSubtitle').innerHTML = step.body;
+  document.getElementById('tourTip').innerHTML =
+    `<span class="tip-label">Tip</span>${step.tip}`;
+
+  const prog = document.getElementById('tourProgress');
+  prog.innerHTML = TOUR_STEPS.map((_, i) => {
+    const cls = i < tourIdx ? 'done' : (i === tourIdx ? 'active' : '');
+    return `<span class="tour-dot ${cls}"></span>`;
+  }).join('');
+
+  document.getElementById('tourBack').innerHTML = '<svg class="ic ic-sm"><use href="#i-arrow-left"/></svg> Back';
+  document.getElementById('tourBack').style.visibility = isFirst ? 'hidden' : 'visible';
+  document.getElementById('tourNext').innerHTML = isLast
+    ? '<svg class="ic ic-sm"><use href="#i-check"/></svg> Got it'
+    : 'Next <svg class="ic ic-sm"><use href="#i-arrow-right"/></svg>';
+  document.getElementById('tourSkip').style.display = isLast ? 'none' : 'inline-block';
+
+  // Wait one frame so tab-switch layout settles, then position spotlight
+  requestAnimationFrame(() => requestAnimationFrame(positionTour));
+}
+
+function positionTour() {
+  if (!tourActive) return;
+  const step = TOUR_STEPS[tourIdx];
+  const card = tourEls.card();
+  const spot = tourEls.spotlight();
+  const [dTop, dBot, dLeft, dRight] = tourEls.dims();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const isMobile = vw <= 640;
+
+  // Helper to fully cover viewport with one dim layer (no spotlight)
+  const fullDim = () => {
+    dTop.style.cssText = 'left:0;right:0;top:0;height:100vh;';
+    dBot.style.cssText = 'display:none;';
+    dLeft.style.cssText = 'display:none;';
+    dRight.style.cssText = 'display:none;';
+    spot.style.display = 'none';
+  };
+
+  let target = null;
+  if (typeof step.target === 'function') target = step.target();
+  else if (step.target) target = document.querySelector(step.target);
+
+  if (!target) {
+    // Centered card (welcome / done)
+    fullDim();
+    card.classList.remove('arrow-top','arrow-bottom','arrow-left','arrow-right','mobile-dock','mobile-dock-top');
+    card.classList.add('arrow-none');
+    const cw = Math.min(380, vw - 24);
+    card.style.width = cw + 'px';
+    // Measure after width is set
+    requestAnimationFrame(() => {
+      const ch = card.offsetHeight;
+      card.style.left = Math.max(12, (vw - cw) / 2) + 'px';
+      card.style.top  = Math.max(12, (vh - ch) / 2) + 'px';
+    });
+    return;
+  }
+
+  // Scroll target into view first
+  try { target.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); } catch {}
+
+  // Re-measure after scroll (give it a beat)
+  setTimeout(() => {
+    if (!tourActive || TOUR_STEPS[tourIdx] !== step) return;
+    const r = target.getBoundingClientRect();
+    const pad = 8;
+    const sx = Math.max(0, r.left - pad);
+    const sy = Math.max(0, r.top  - pad);
+    const sw = Math.min(vw - sx, r.width + pad * 2);
+    const sh = Math.min(vh - sy, r.height + pad * 2);
+
+    // Spotlight ring
+    spot.style.display = 'block';
+    spot.style.left = sx + 'px';
+    spot.style.top = sy + 'px';
+    spot.style.width = sw + 'px';
+    spot.style.height = sh + 'px';
+
+    // Four dim panels around spotlight
+    dTop.style.cssText    = `left:0;right:0;top:0;height:${sy}px;`;
+    dBot.style.cssText    = `left:0;right:0;top:${sy + sh}px;bottom:0;`;
+    dLeft.style.cssText   = `left:0;top:${sy}px;width:${sx}px;height:${sh}px;`;
+    dRight.style.cssText  = `left:${sx + sw}px;right:0;top:${sy}px;height:${sh}px;`;
+
+    // Position the card
+    card.classList.remove('arrow-top','arrow-bottom','arrow-left','arrow-right','arrow-none','mobile-dock','mobile-dock-top');
+
+    if (isMobile) {
+      // On mobile: dock to the side of the target that has more room
+      const spaceAbove = sy;
+      const spaceBelow = vh - (sy + sh);
+      const dockTop = spaceAbove > spaceBelow; // dock at top of screen if there's more room above the target
+      card.classList.add('mobile-dock');
+      if (dockTop) card.classList.add('mobile-dock-top');
+      card.style.width = '';
+      card.style.top = '';
+      card.style.left = '';
+      return;
+    }
+
+    const cw = Math.min(380, vw - 24);
+    card.style.width = cw + 'px';
+
+    // Measure card after width applied
+    requestAnimationFrame(() => {
+      const ch = card.offsetHeight;
+      const gap = 16;
+      const margin = 12;
+
+      // Try: below, above, right, left, then fallback centered
+      let placement = null;
+      if (sy + sh + gap + ch <= vh - margin) placement = 'below';
+      else if (sy - gap - ch >= margin)      placement = 'above';
+      else if (sx + sw + gap + cw <= vw - margin) placement = 'right';
+      else if (sx - gap - cw >= margin)      placement = 'left';
+      else placement = 'center';
+
+      let left, top, arrow = '';
+      if (placement === 'below') {
+        top = sy + sh + gap;
+        left = clamp(sx + sw / 2 - 40, margin, vw - cw - margin);
+        arrow = 'arrow-top';
+      } else if (placement === 'above') {
+        top = sy - gap - ch;
+        left = clamp(sx + sw / 2 - 40, margin, vw - cw - margin);
+        arrow = 'arrow-bottom';
+      } else if (placement === 'right') {
+        left = sx + sw + gap;
+        top  = clamp(sy + sh / 2 - 40, margin, vh - ch - margin);
+        arrow = 'arrow-left';
+      } else if (placement === 'left') {
+        left = sx - gap - cw;
+        top  = clamp(sy + sh / 2 - 40, margin, vh - ch - margin);
+        arrow = 'arrow-right';
+      } else {
+        left = Math.max(margin, (vw - cw) / 2);
+        top  = Math.max(margin, (vh - ch) / 2);
+        arrow = 'arrow-none';
+      }
+      card.style.left = left + 'px';
+      card.style.top  = top + 'px';
+      card.classList.add(arrow);
+    });
+  }, 280);
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function visibleEl(...selectors) {
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el && el.offsetParent !== null) return el;
+  }
+  return document.querySelector(selectors[0]);
+}
+
+// Dim panels: clicking outside spotlight area closes the tour
+['tourDimTop','tourDimBottom','tourDimLeft','tourDimRight'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    if (tourActive) closeTour();
+  });
+});
+
+document.addEventListener('keydown', (e) => {
+  if (!tourActive) return;
+  if (e.key === 'Escape')     closeTour();
+  if (e.key === 'ArrowRight') nextTour();
+  if (e.key === 'ArrowLeft')  prevTour();
+});
+
+window.addEventListener('resize', () => { if (tourActive) positionTour(); });
+window.addEventListener('scroll', () => { if (tourActive) positionTour(); }, true);
+
+// First-run trigger
+if (!localStorage.getItem(TOUR_SEEN_KEY)) {
+  setTimeout(startTour, 500);
+}
+</script>
+
+<!-- ══════════════════════ PWA BOOTSTRAP + LICENSE CHECK ══════════════════════ -->
+<script>
+/* This block is intentionally isolated from the main app script so an
+ * error here can never break the local-only experience. */
+(function () {
+  'use strict';
+
+  // ───────────── Service worker registration ─────────────
+  // Only register on https:// or localhost — file:// (double-click) is unsupported.
+  var canRegisterSW =
+    'serviceWorker' in navigator &&
+    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+
+  if (canRegisterSW) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then(function (reg) {
+          // If a new SW is found, ask it to activate immediately on next reload.
+          reg.addEventListener('updatefound', function () {
+            var nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', function () {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                // A newer version is ready. Toast hint if the function exists.
+                try { if (typeof toast === 'function') toast('Update available — reload to apply.'); } catch (e) {}
+              }
+            });
+          });
+        })
+        .catch(function () { /* SW failed — app still works locally */ });
+
+      // When a waiting SW takes over, reload once so the new shell renders.
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (refreshing) return;
+        refreshing = true;
+        // location.reload();  // disabled by default; uncomment to force auto-reload on update
+      });
+    });
+  }
+
+  // ───────────── License check ─────────────
+  // Behavior:
+  //   - On load, if online: POST /api/verify-license with stored JWT.
+  //   - Server returns { valid, expires_at, status }.
+  //   - Cache the result in localStorage with a 7-day grace TTL.
+  //   - If invalid/revoked → redirect to /login.
+  //   - If offline and cached license still within grace → allow.
+  //   - If offline and grace expired → show "Please connect to verify" overlay.
+  //
+  // This is a stub the future Next.js wrapper will plug into. When the file
+  // is opened directly (file://) or served without an /api route, the check
+  // soft-fails and the app continues to work — the goal here is to wire up
+  // the contract so later phases drop in cleanly.
+
+  var LIC_KEY      = 'rxaudit_license_v1';
+  var GRACE_MS     = 7 * 24 * 60 * 60 * 1000;   // 7 days offline grace
+  var REVERIFY_MS  = 24 * 60 * 60 * 1000;       // re-check at most once per day
+  var TOKEN_KEY    = 'rxaudit_jwt';             // future: set by /login flow
+
+  function loadLicense() {
+    try { return JSON.parse(localStorage.getItem(LIC_KEY) || 'null'); }
+    catch (e) { return null; }
+  }
+  function saveLicense(lic) {
+    try { localStorage.setItem(LIC_KEY, JSON.stringify(lic)); } catch (e) {}
+  }
+  function clearLicense() {
+    try { localStorage.removeItem(LIC_KEY); } catch (e) {}
+  }
+
+  // True if the cached license is still within the offline grace window
+  // and not server-rejected.
+  function cachedLicenseStillValid(lic) {
+    if (!lic) return false;
+    if (lic.status && lic.status !== 'approved') return false;
+    if (lic.expires_at && Date.parse(lic.expires_at) < Date.now()) return false;
+    if (lic.verified_at && (Date.now() - Date.parse(lic.verified_at)) > GRACE_MS) return false;
+    return true;
+  }
+
+  function showOfflineBlock() {
+    if (document.getElementById('licenseBlock')) return;
+    var el = document.createElement('div');
+    el.id = 'licenseBlock';
+    el.setAttribute('role', 'dialog');
+    el.style.cssText =
+      'position:fixed;inset:0;z-index:9999;background:rgba(0,0,61,0.55);' +
+      '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);' +
+      'display:flex;align-items:center;justify-content:center;padding:24px;' +
+      "font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#00003D;";
+    el.innerHTML =
+      '<div style="background:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.7);' +
+      'border-radius:18px;max-width:380px;padding:26px;text-align:center;' +
+      'box-shadow:0 24px 60px rgba(0,0,61,0.32);">' +
+      '<h2 style="margin:0 0 8px;font-size:18px;font-weight:800;letter-spacing:-0.3px;">Please connect to verify license</h2>' +
+      '<p style="margin:0 0 16px;font-size:13.5px;color:#0600AB;line-height:1.5;">' +
+      "You've been offline longer than 7 days. Connect to the internet once para ma-verify ulit ang license mo." +
+      '</p>' +
+      '<button id="licRetry" style="padding:10px 18px;border-radius:10px;border:none;cursor:pointer;' +
+      'font-family:inherit;font-weight:700;font-size:13px;color:white;' +
+      'background:linear-gradient(135deg,#0033FF,#977DFF);' +
+      'box-shadow:0 4px 14px rgba(0,51,255,0.32);">Retry</button>' +
+      '</div>';
+    document.body.appendChild(el);
+    document.getElementById('licRetry').addEventListener('click', verifyLicense);
+  }
+
+  function hideOfflineBlock() {
+    var el = document.getElementById('licenseBlock');
+    if (el) el.remove();
+  }
+
+  function redirectToLogin(reason) {
+    try { sessionStorage.setItem('rxaudit_login_reason', reason || ''); } catch (e) {}
+    // Only redirect when /login is actually reachable (i.e. served by Next.js).
+    // In standalone file:// mode, show the block instead so we don't bounce.
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      location.replace('/login?reason=' + encodeURIComponent(reason || ''));
+    } else {
+      showOfflineBlock();
+    }
+  }
+
+  function readToken() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  }
+
+  function verifyLicense() {
+    // No network → fall back to cached license + grace window.
+    if (!navigator.onLine) {
+      var lic = loadLicense();
+      if (cachedLicenseStillValid(lic)) { hideOfflineBlock(); return; }
+      // No cached license at all → in dev/file mode just let the app run.
+      if (!lic) { hideOfflineBlock(); return; }
+      showOfflineBlock();
+      return;
+    }
+
+    var token = readToken();
+
+    fetch('/api/verify-license', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': token ? ('Bearer ' + token) : ''
+      },
+      credentials: 'include',
+      body: JSON.stringify({})
+    })
+      .then(function (res) {
+        if (res.status === 401 || res.status === 403) {
+          clearLicense();
+          redirectToLogin('unauthorized');
+          throw new Error('unauthorized');
+        }
+        if (!res.ok) throw new Error('http ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        if (!data || data.valid !== true) {
+          clearLicense();
+          redirectToLogin(data && data.status ? data.status : 'invalid');
+          return;
+        }
+        saveLicense({
+          status: data.status || 'approved',
+          expires_at: data.expires_at || null,
+          verified_at: new Date().toISOString()
+        });
+        hideOfflineBlock();
+      })
+      .catch(function (err) {
+        // Network or 5xx error: fall back to cache if still within grace.
+        if (String(err && err.message) === 'unauthorized') return;
+        var lic = loadLicense();
+        if (cachedLicenseStillValid(lic)) { hideOfflineBlock(); return; }
+        if (!lic) { hideOfflineBlock(); return; } // dev/file mode
+        showOfflineBlock();
+      });
+  }
+
+  // Re-verify on load, when network returns, and at most once per REVERIFY_MS.
+  function maybeVerifyOnLoad() {
+    var lic = loadLicense();
+    var lastVerified = lic && lic.verified_at ? Date.parse(lic.verified_at) : 0;
+    if (Date.now() - lastVerified < REVERIFY_MS && cachedLicenseStillValid(lic)) {
+      // Recent enough — skip the network round-trip.
+      return;
+    }
+    verifyLicense();
+  }
+
+  // Defer until after first paint so it never blocks the UI.
+  if (document.readyState === 'complete') {
+    setTimeout(maybeVerifyOnLoad, 0);
+  } else {
+    window.addEventListener('load', function () { setTimeout(maybeVerifyOnLoad, 0); });
+  }
+
+  window.addEventListener('online',  verifyLicense);
+  window.addEventListener('offline', function () { /* cached license keeps app running */ });
+
+  // Expose minimal hooks for the future Next.js wrapper to drive auth state.
+  window.RXAUDIT_AUTH = {
+    setToken: function (t) { try { localStorage.setItem(TOKEN_KEY, t || ''); } catch (e) {} },
+    clear:    function () { clearLicense(); try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} },
+    verify:   verifyLicense
+  };
+})();
+</script>
+
+<!-- ══════════════════════ MOBILE BOTTOM TABS ══════════════════════ -->
+<nav class="mobile-tabs" data-tour="mob-nav">
+  <div class="mob-tab active" id="mobtab-dispensing" onclick="switchTab('dispensing')">
+    <svg class="ic mob-tab-icon"><use href="#i-dispense"/></svg>
+    <span>Dispensing</span>
+  </div>
+  <div class="mob-tab" id="mobtab-inventory" onclick="switchTab('inventory')">
+    <svg class="ic mob-tab-icon"><use href="#i-inventory"/></svg>
+    <span>Inventory</span>
+  </div>
+  <div class="mob-tab" id="mobtab-opex" onclick="switchTab('opex')">
+    <svg class="ic mob-tab-icon"><use href="#i-opex"/></svg>
+    <span>OPEX</span>
+  </div>
+</nav>
+
+<!-- ══════════════════════ GUIDED TOUR (spotlight) ══════════════════════ -->
+<div class="tour-dim" id="tourDimTop"></div>
+<div class="tour-dim" id="tourDimBottom"></div>
+<div class="tour-dim" id="tourDimLeft"></div>
+<div class="tour-dim" id="tourDimRight"></div>
+<div class="tour-spotlight" id="tourSpotlight"></div>
+<div class="tour-card" id="tourCard" role="dialog" aria-labelledby="tourTitle" aria-modal="false">
+  <div class="tour-arrow"></div>
+  <button type="button" class="tour-close" onclick="closeTour()" aria-label="Close guide"><svg class="ic ic-sm" style="stroke:white;"><use href="#i-x"/></svg></button>
+  <div class="tour-header">
+    <span class="tour-step-pill" id="tourPill"><span class="dot"></span>Step 1</span>
+    <span class="tour-emoji" id="tourEmoji"></span>
+    <h2 class="tour-title" id="tourTitle">Welcome</h2>
+  </div>
+  <div class="tour-body">
+    <p class="tour-subtitle" id="tourSubtitle"></p>
+    <div class="tour-tip" id="tourTip"></div>
+  </div>
+  <div class="tour-footer">
+    <div class="tour-progress" id="tourProgress"></div>
+    <div class="tour-actions">
+      <button type="button" class="tour-btn tour-btn-ghost" id="tourBack" onclick="prevTour()">Back</button>
+      <button type="button" class="tour-btn tour-btn-primary" id="tourNext" onclick="nextTour()">Next</button>
+    </div>
+    <button type="button" class="tour-skip" id="tourSkip" onclick="closeTour()">Skip</button>
+  </div>
+</div>
+
+</body>
+</html>
