@@ -929,7 +929,7 @@
 
 <!-- ══════════════════════ MOBILE HEADER ══════════════════════ -->
 <header class="mobile-header">
-  <img src="/rxaudit-logo.png" alt="RXaudit" class="mob-logo" onerror="this.style.display='none'">
+  <img src="/icons/icon.svg" alt="RXaudit" class="mob-logo">
   <div class="mob-header-text">
     <span class="mob-title">RXaudit Starter</span>
     <span class="mob-sub">Offline Pharmacy App</span>
@@ -947,9 +947,8 @@
 <aside class="sidebar">
   <div class="sidebar-brand">
     <img
-      src="/rxaudit-logo.png"
-      alt="RXaudit"
-      onerror="this.style.display='none'">
+      src="/icons/icon.svg"
+      alt="RXaudit">
     <div class="app-name">RXaudit Starter App</div>
     <div class="app-sub">Offline Pharmacy MVP</div>
   </div>
@@ -1124,7 +1123,7 @@
           <table>
             <thead>
               <tr>
-                <th>Date</th><th>Order #</th><th>Customer</th>
+                <th>Date</th><th>Time</th><th>Order #</th><th>Customer</th>
                 <th class="text-right">Items</th>
                 <th class="text-right">Total</th>
               </tr>
@@ -1354,7 +1353,10 @@ function uid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 // Generates a batch number like "B-20260423-A4F9"
 function genBatchNo() {
@@ -1412,7 +1414,7 @@ function switchTab(name) {
 
   if (name === 'dispensing') { renderProductList(); renderSales(); }
   if (name === 'inventory')  { renderInventory(); }
-  if (name === 'opex')       { renderExpenses(); }
+  if (name === 'opex')       { renderOpexStats(); renderSalesLog(); renderExpenses(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -1928,8 +1930,9 @@ function dispenseCart() {
   }
   dbSave('inv', invData);
 
+  const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const tx = {
-    id: uid(), date: today(), order_number: orderNum,
+    id: uid(), date: today(), time, order_number: orderNum,
     customer, items: cart.map(c => ({ ...c })),
     total, created_at: now.toISOString(),
   };
@@ -2120,6 +2123,7 @@ function renderSalesLog() {
   let html = visible.map(t => `
     <tr>
       <td class="font-mono" style="color:#94a3b8;">${esc(t.date)}</td>
+      <td class="font-mono" style="color:#c4b5fd;font-size:12px;">${esc(t.time || '—')}</td>
       <td class="font-mono" style="color:#7c3aed;font-weight:600;">${esc(t.order_number)}</td>
       <td>${esc(t.customer || 'Walk-in Customer')}</td>
       <td class="text-right" style="color:#4c1d95;">${t.items.length}</td>
