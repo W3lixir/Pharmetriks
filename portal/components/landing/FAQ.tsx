@@ -66,7 +66,10 @@ export default function FAQ() {
                   className="w-full flex items-start gap-3 px-5 py-4 text-left"
                   aria-expanded={isOpen}
                 >
-                  <span className="flex-1 text-[14.5px] font-extrabold text-ink leading-snug tracking-tight">
+                  <span
+                    className="flex-1 text-[14.5px] font-extrabold text-ink leading-snug tracking-tight"
+                    suppressHydrationWarning
+                  >
                     {f.q}
                   </span>
                   <span
@@ -79,7 +82,10 @@ export default function FAQ() {
                 </button>
                 {isOpen && (
                   <div className="px-5 pb-5 -mt-1">
-                    <p className="text-[13.5px] leading-relaxed text-ink-2/85 font-medium">
+                    <p
+                      className="text-[13.5px] leading-relaxed text-ink-2/85 font-medium"
+                      suppressHydrationWarning
+                    >
                       {f.a}
                     </p>
                   </div>
