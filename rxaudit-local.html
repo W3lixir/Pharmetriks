@@ -235,7 +235,7 @@
     .badge-violet { background: rgba(151,125,255,0.22); color: var(--ink-2); }
 
     /* Stat cards — glassy */
-    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
     .stat-card {
       background: var(--glass-bg);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
@@ -709,7 +709,7 @@
       .main { overflow: auto; }
       .page { padding: 20px 22px; }
       .dispense-layout, .opex-layout { grid-template-columns: 1fr; }
-      .stats-row { grid-template-columns: repeat(3,1fr); }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
       .form-row { grid-template-columns: 1fr 1fr; }
       .cart-panel { position: static; }
     }
@@ -1844,7 +1844,7 @@ function addToCart(id) {
     if (existing.qty < p.qty) { existing.qty++; }
     else { toast(`Only ${p.qty} in stock!`, 'error'); return; }
   } else {
-    cart.push({ product_id: id, generic_name: p.generic_name, brand_name: p.brand_name, dosage: p.dosage || 'N/A', qty: 1, price: p.price });
+    cart.push({ product_id: id, generic_name: p.generic_name, brand_name: p.brand_name, dosage: p.dosage || 'N/A', qty: 1, price: p.price, cost: p.cost || 0 });
   }
   renderCart();
   renderProductList();
@@ -2045,13 +2045,18 @@ function renderOpexStats() {
   const sales = filterByPeriod(salesData, opexPeriod);
   const exps  = filterByPeriod(expData, opexPeriod);
   const grossSales  = sales.reduce((s, t) => s + Number(t.total || 0), 0);
+  const totalCOGS   = sales.reduce((s, t) => s + t.items.reduce((si, i) => si + (Number(i.cost || 0) * Number(i.qty || 0)), 0), 0);
   const totalExp    = exps.reduce((s, e) => s + Number(e.amount || 0), 0);
-  const netProfit   = grossSales - totalExp;
+  const netProfit   = grossSales - totalCOGS - totalExp;
   const profitColor = netProfit >= 0 ? '#059669' : '#dc2626';
   el.innerHTML = `
     <div class="stat-card">
       <div class="slabel">Gross Sales <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
       <div class="sval" style="font-size:20px;color:#1e0a47;">${peso(grossSales)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="slabel">Cost of Goods <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
+      <div class="sval red" style="font-size:20px;">${peso(totalCOGS)}</div>
     </div>
     <div class="stat-card">
       <div class="slabel">Expenses <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
