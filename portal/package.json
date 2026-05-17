@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "sync-app": "cp ../rxaudit-local.html public/rxaudit-local.html",
+    "dev": "npm run sync-app && next dev",
+    "build": "npm run sync-app && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
