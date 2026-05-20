@@ -210,7 +210,8 @@
       background: var(--glass-bg);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
       border: 1px solid var(--glass-border);
-      border-radius: 16px; overflow: hidden;
+      border-radius: 16px; overflow-x: auto; overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
       box-shadow: var(--glass-shadow);
     }
     table { width: 100%; border-collapse: collapse; }
