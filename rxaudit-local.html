@@ -1085,7 +1085,7 @@
       <table>
         <thead>
           <tr>
-            <th>Generic Name</th><th>Brand</th><th>Dosage</th><th>Category</th>
+            <th>Generic Name</th><th>Brand</th><th>Dosage</th>
             <th class="text-right">Qty</th><th class="text-right">SRP</th>
             <th class="text-right">Cost</th><th>Expiry</th>
             <th>Status</th><th style="width:90px;"></th>
@@ -1449,7 +1449,7 @@ function renderInventory() {
 
   const tb = document.getElementById('invTable');
   if (!filtered.length) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="10">${invData.length ? 'No results found.' : 'No products yet. Click + Add Product to get started.'}</td></tr>`;
+    tb.innerHTML = `<tr class="empty-row"><td colspan="9">${invData.length ? 'No results found.' : 'No products yet. Click + Add Product to get started.'}</td></tr>`;
   } else {
     tb.innerHTML = filtered.map(p => {
       const expStatus = expiryStatus(p.expiry_date);
@@ -1466,7 +1466,6 @@ function renderInventory() {
         <td><strong style="color:#1e0a47;">${esc(p.generic_name)}</strong></td>
         <td style="color:#7c3aed;">${esc(p.brand_name)}</td>
         <td style="color:#64748b;">${esc(p.dosage || 'N/A')}</td>
-        <td style="color:#64748b;">${esc(p.category || '—')}</td>
         <td class="text-right"><span class="badge ${qtyBadge} font-mono">${p.qty}</span></td>
         <td class="text-right font-mono" style="color:#1e0a47;font-weight:600;">${peso(p.price)}</td>
         <td class="text-right font-mono" style="color:#a78bfa;">${p.cost ? peso(p.cost) : '—'}</td>
