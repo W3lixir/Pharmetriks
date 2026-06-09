@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { adminService } from '@/lib/admin';
+import { adminService, requireAdmin } from '@/lib/admin';
 import Icon from '@/components/ui/Icon';
 import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
@@ -34,6 +34,10 @@ type Profile = {
 };
 
 export default async function AdminDashboard({ searchParams }: { searchParams: Search }) {
+  // Gate here (Node runtime) — the edge middleware that used to do this was
+  // removed because it crashed on Vercel (see app/app/route.ts for why).
+  await requireAdmin();
+
   const filter = (searchParams.filter ?? 'awaiting_payment') as typeof FILTERS[number]['id'];
   const query  = (searchParams.q ?? '').trim();
 
