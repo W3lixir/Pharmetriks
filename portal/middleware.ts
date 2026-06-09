@@ -18,9 +18,21 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   let response = NextResponse.next({ request });
 
+  // Defensive: if the Supabase env vars are missing (e.g. not configured in
+  // the deployment yet), don't crash the entire site with a 500. Let the
+  // request through unauthenticated — the per-page checks still gate access.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error(
+      '[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — skipping auth gating.',
+    );
+    return response;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -35,7 +47,14 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null;
+  try {
+    ({ data: { user } } = await supabase.auth.getUser());
+  } catch (err) {
+    // A transient Supabase/network error must not take down every route.
+    console.error('[middleware] supabase.auth.getUser() failed:', err);
+    return response;
+  }
 
   const needsAuth = AUTHED_ONLY.some(p => url.pathname === p || url.pathname.startsWith(p + '/'));
   const isGuestPage = GUEST_ONLY.some(p => url.pathname === p);
