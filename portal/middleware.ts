@@ -18,22 +18,23 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl;
   let response = NextResponse.next({ request });
 
-  // Defensive: if the Supabase env vars are missing (e.g. not configured in
-  // the deployment yet), don't crash the entire site with a 500. Let the
-  // request through unauthenticated — the per-page checks still gate access.
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error(
-      '[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — skipping auth gating.',
-    );
-    return response;
-  }
+  // Bulletproof: the middleware must NEVER take down the whole site with a
+  // MIDDLEWARE_INVOCATION_FAILED 500. Any problem with the Supabase env vars
+  // (missing, or malformed — stray quotes/whitespace make createServerClient
+  // throw "Invalid URL") or a transient network error simply degrades to
+  // "no session" and lets the request through. Per-page checks still gate
+  // access, so this fails safe, not open.
+  let user: Awaited<ReturnType<ReturnType<typeof createServerClient>['auth']['getUser']>>['data']['user'] = null;
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[middleware] Supabase env vars missing — skipping auth gating.');
+      return response;
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet: { name: string; value: string; options: CookieOptions }[]) => {
@@ -44,15 +45,11 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
-    },
-  );
+    });
 
-  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null;
-  try {
     ({ data: { user } } = await supabase.auth.getUser());
   } catch (err) {
-    // A transient Supabase/network error must not take down every route.
-    console.error('[middleware] supabase.auth.getUser() failed:', err);
+    console.error('[middleware] auth check failed — passing through:', err);
     return response;
   }
 
