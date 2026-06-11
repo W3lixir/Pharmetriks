@@ -1898,7 +1898,8 @@ function peso(n) {
 }
 
 function esc(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function toast(msg, type = 'success') {
@@ -2450,7 +2451,8 @@ function openSukiDetail(id) {
   if (!s) return;
   document.getElementById('detailSukiId').value = id;
   document.getElementById('detailSukiName').textContent = s.name || 'Suki';
-  document.getElementById('detailSukiMeta').textContent = [s.phone, s.note].filter(Boolean).map(esc).join(' · ');
+  // textContent is not HTML — no esc() here or entities would show literally.
+  document.getElementById('detailSukiMeta').textContent = [s.phone, s.note].filter(Boolean).join(' · ');
   const bal = sukiBalance(id);
   const balEl = document.getElementById('detailSukiBalance');
   balEl.textContent = bal > 0.0001 ? peso(bal) : (bal < -0.0001 ? peso(-bal) + ' (sobra)' : 'Bayad ✓');
@@ -3567,7 +3569,9 @@ function dispenseCart() {
 
   for (const item of cart) {
     const p = invData.find(x => x.id === item.product_id);
-    if (p) p.qty = Math.max(0, p.qty - item.qty);
+    // Bump updated_at so the qty change wins last-write-wins sync merges
+    // on other devices (otherwise both copies tie on the old timestamp).
+    if (p) { p.qty = Math.max(0, p.qty - item.qty); p.updated_at = now.toISOString(); }
   }
   dbSave('inv', invData);
 
