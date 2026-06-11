@@ -987,12 +987,19 @@
     </button>
   </form>
 
+  <div id="syncFooter" style="display:none;padding:0 16px 8px;">
+    <button onclick="window.PHARMETRIKS_SYNC && window.PHARMETRIKS_SYNC.pullAll()" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);border-radius:10px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Sync Now
+    </button>
+  </div>
+
   <div class="sidebar-footer">
     <svg class="rx-cross" viewBox="0 0 24 24" fill="rgba(255,255,255,0.25)">
       <rect x="9" y="2" width="6" height="20" rx="1.5"/>
       <rect x="2" y="9" width="20" height="6" rx="1.5"/>
     </svg>
-    Data saved in browser
+    <span id="syncFooterText">Data saved in browser</span>
   </div>
 </aside>
 
@@ -2971,7 +2978,15 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
       var all = loadTombs(); all[key] = all[key] || {}; all[key][id] = new Date().toISOString(); saveTombs(all);
     },
 
-    onFeaturesReady: function () { if (entitled() && !didInitialPull) { didInitialPull = true; this.pullAll(); } },
+    onFeaturesReady: function () {
+      if (entitled()) {
+        var btn = document.getElementById('syncFooter');
+        var txt = document.getElementById('syncFooterText');
+        if (btn) btn.style.display = 'block';
+        if (txt) txt.textContent = 'Cloud sync enabled';
+      }
+      if (entitled() && !didInitialPull) { didInitialPull = true; this.pullAll(); }
+    },
 
     applyMerged: function (key, arr) {
       this.applyingRemote = true;
@@ -3019,7 +3034,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (r.status === 409) { return r.json().then(function (c) { self.resolveConflict(key, c.current || {}, isRetry); }); }
         if (!r.ok) throw new Error('push ' + r.status);
         return r.json().then(function (res) { versions[key] = res.version || ((versions[key] || 0) + 1); setBadge('synced'); });
-      }).catch(function () { setBadge('offline'); });
+      }).catch(function (e) { console.warn('[sync] push/' + key + ' failed:', e && e.message); setBadge('offline'); });
     },
 
     resolveConflict: function (key, current, isRetry) {
