@@ -2862,14 +2862,12 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
       });
   }
 
-  // Re-verify on load, when network returns, and at most once per REVERIFY_MS.
+  // Always re-verify on a fresh app load (when online) so entitlement changes
+  // — e.g. an add-on the admin just enabled — show up the next time the user
+  // opens the app, instead of being masked by a stale cached license for up to
+  // REVERIFY_MS. The request is tiny and runs once per load. Offline is handled
+  // inside verifyLicense (cached license + 7-day grace window).
   function maybeVerifyOnLoad() {
-    var lic = loadLicense();
-    var lastVerified = lic && lic.verified_at ? Date.parse(lic.verified_at) : 0;
-    if (Date.now() - lastVerified < REVERIFY_MS && cachedLicenseStillValid(lic)) {
-      // Recent enough — skip the network round-trip.
-      return;
-    }
     verifyLicense();
   }
 
@@ -2989,13 +2987,13 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     },
 
     onFeaturesReady: function () {
-      if (entitled()) {
-        var btn = document.getElementById('syncFooter');
-        var txt = document.getElementById('syncFooterText');
-        if (btn) btn.style.display = 'block';
-        if (txt) txt.textContent = 'Cloud sync enabled';
-      }
-      if (entitled() && !didInitialPull) { didInitialPull = true; this.pullAll(); }
+      if (!entitled()) return;
+      var btn = document.getElementById('syncFooter');
+      var txt = document.getElementById('syncFooterText');
+      if (btn) btn.style.display = 'block';
+      if (txt) txt.textContent = 'Cloud sync enabled';
+      startPoll();                                  // keep devices in step automatically
+      if (!didInitialPull) { didInitialPull = true; this.pullAll(); }
     },
 
     applyMerged: function (key, arr) {
@@ -3095,8 +3093,6 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     else stopPoll();
   });
   window.addEventListener('focus', function () { if (entitled() && navigator.onLine) Sync.pullAll(); });
-  // Kick off the poll once features are known (entitled accounts only).
-  setTimeout(function () { if (entitled()) startPoll(); }, 1500);
 })();
 </script>
 
