@@ -956,14 +956,18 @@
   <nav class="sidebar-nav" data-tour="nav">
     <div class="nav-label">Main Menu</div>
 
-    <div class="nav-item active" onclick="switchTab('dispensing')" data-tour="nav-dispensing">
+    <div class="nav-item active" data-tab="dispensing" onclick="switchTab('dispensing')" data-tour="nav-dispensing">
       <svg class="ic"><use href="#i-dispense"/></svg> Dispensing
     </div>
-    <div class="nav-item" onclick="switchTab('inventory')" data-tour="nav-inventory">
+    <div class="nav-item" data-tab="inventory" onclick="switchTab('inventory')" data-tour="nav-inventory">
       <svg class="ic"><use href="#i-inventory"/></svg> Inventory
     </div>
-    <div class="nav-item" onclick="switchTab('opex')" data-tour="nav-opex">
+    <div class="nav-item" data-tab="opex" onclick="switchTab('opex')" data-tour="nav-opex">
       <svg class="ic"><use href="#i-opex"/></svg> OPEX
+    </div>
+    <!-- Insights tab (add-on: 'charts_insights'). Hidden unless entitled. -->
+    <div class="nav-item" data-tab="insights" id="navInsights" onclick="switchTab('insights')" style="display:none;">
+      <svg class="ic"><use href="#i-chart"/></svg> Insights
     </div>
   </nav>
 
@@ -1141,6 +1145,26 @@
       background:#fff; border:1px solid #f3e8d8; border-radius:10px; padding:10px 12px;
       font-family:inherit; max-height:220px; overflow:auto;
     }
+
+    /* ── Charts & Insights ── */
+    .insights-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+    .ins-card {
+      background:#fff; border:1px solid #eee7f7; border-radius:14px;
+      padding:14px 16px; margin-bottom:14px; box-shadow:0 4px 16px rgba(124,58,237,0.05);
+    }
+    .ins-card-head { display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
+    .ins-card-head strong { font-size:14px; color:#1e0a47; }
+    .ins-sub { font-size:11.5px; color:#a78bfa; font-weight:600; }
+    .ins-chart { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .ins-svg { display:block; height:168px; width:100%; }
+    .ins-axis { font-size:9px; fill:#94a3b8; font-weight:600; }
+    .ins-empty { color:#94a3b8; font-size:13px; padding:22px 4px; text-align:center; }
+    .ins-top-row { display:flex; align-items:center; gap:10px; padding:5px 0; }
+    .ins-top-name { flex:0 0 38%; font-size:12.5px; font-weight:700; color:#1e0a47; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ins-top-bar { flex:1; height:9px; background:#f1edfb; border-radius:999px; overflow:hidden; }
+    .ins-top-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#7c3aed,#c4b5fd); }
+    .ins-top-val { flex:0 0 auto; font-size:12px; font-weight:800; color:#1e0a47; font-variant-numeric:tabular-nums; }
+    .ins-top-sub { font-weight:600; color:#a78bfa; font-size:11px; }
   </style>
 
   <!-- ════ INVENTORY ════ -->
@@ -1268,6 +1292,36 @@
           <div id="expSummary"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ════ INSIGHTS (add-on: 'charts_insights') ════ -->
+  <div id="panel-insights" class="panel">
+    <div class="section-header">
+      <h2>Charts &amp; Insights</h2>
+      <p>Kita mo ang totoong lakad ng botika — benta, kita, at best sellers.</p>
+    </div>
+
+    <div class="insights-bar">
+      <div class="period-filter" id="insightsPeriod">
+        <button class="period-btn" data-ip="7" onclick="setInsightsPeriod(this)">7 araw</button>
+        <button class="period-btn active" data-ip="30" onclick="setInsightsPeriod(this)">30 araw</button>
+        <button class="period-btn" data-ip="90" onclick="setInsightsPeriod(this)">90 araw</button>
+        <button class="period-btn" data-ip="all" onclick="setInsightsPeriod(this)">Lahat</button>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="printInsightsReport()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Print / PDF</button>
+    </div>
+
+    <div class="stats-row" id="insightsKpis"></div>
+
+    <div class="ins-card">
+      <div class="ins-card-head"><strong>Sales Trend</strong><span id="insTrendSub" class="ins-sub"></span></div>
+      <div id="insTrend" class="ins-chart"></div>
+    </div>
+
+    <div class="ins-card">
+      <div class="ins-card-head"><strong>Top Sellers</strong><span class="ins-sub">by units sold</span></div>
+      <div id="insTop"></div>
     </div>
   </div>
 
@@ -1488,11 +1542,11 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ══════════════════ SIDEBAR NAV ══════════════════
-const TAB_NAMES = ['dispensing', 'inventory', 'opex'];
+const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights'];
 
 function switchTab(name) {
-  document.querySelectorAll('.nav-item').forEach((t, i) => {
-    t.classList.toggle('active', TAB_NAMES[i] === name);
+  document.querySelectorAll('.nav-item[data-tab]').forEach(t => {
+    t.classList.toggle('active', t.getAttribute('data-tab') === name);
   });
   TAB_NAMES.forEach(t => {
     const el = document.getElementById('mobtab-' + t);
@@ -1505,6 +1559,7 @@ function switchTab(name) {
   if (name === 'dispensing') { renderProductList(); renderSales(); }
   if (name === 'inventory')  { renderInventory(); }
   if (name === 'opex')       { renderOpexStats(); renderSalesLog(); renderExpenses(); }
+  if (name === 'insights')   { renderInsights(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -1687,6 +1742,197 @@ function fallbackCopyText(text, done) {
   } catch (e) { toast('Hindi ma-copy — i-screenshot na lang ang listahan.', 'error'); }
 }
 window.renderSmartAlerts = renderSmartAlerts;
+
+// ══════════════════ CHARTS & INSIGHTS (add-on: 'charts_insights') ══════════════════
+function insightsEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('charts_insights')); }
+let insightsPeriodDays = 30;  // number of days, or 'all'
+const INS_MONTHS = ['Jan','Feb','Mar','Abr','May','Hun','Hul','Ago','Set','Okt','Nob','Dis'];
+
+function isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function weekStart(d) { const x = new Date(d); const day = (x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; }
+
+function insightsWindowStartStr() {
+  if (insightsPeriodDays === 'all') return null;
+  const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (insightsPeriodDays - 1));
+  return isoDate(d);
+}
+
+// Show/hide the Insights nav based on entitlement; bounce off the tab if revoked.
+function applyInsightsVisibility() {
+  const on = insightsEnabled();
+  const nav = document.getElementById('navInsights');
+  const mob = document.getElementById('mobtab-insights');
+  if (nav) nav.style.display = on ? '' : 'none';
+  if (mob) mob.style.display = on ? '' : 'none';
+  const panel = document.getElementById('panel-insights');
+  if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
+}
+window.applyInsightsVisibility = applyInsightsVisibility;
+
+function setInsightsPeriod(btn) {
+  document.querySelectorAll('#insightsPeriod .period-btn').forEach(b => b.classList.toggle('active', b === btn));
+  const v = btn.getAttribute('data-ip');
+  insightsPeriodDays = (v === 'all') ? 'all' : parseInt(v);
+  renderInsights();
+}
+
+// Aggregate sales in the active window. Est. gross profit = net sales − COGS,
+// so customer discounts (already baked into tx.total) are accounted for.
+function aggregateInsights() {
+  const start = insightsWindowStartStr();
+  const tx = (salesData || []).filter(t => !start || (t.date && t.date >= start));
+  let netSales = 0, cogs = 0, units = 0;
+  const byProduct = {};
+  tx.forEach(t => {
+    netSales += Number(t.total) || 0;
+    (t.items || []).forEach(it => {
+      const q = Number(it.qty) || 0;
+      const rev = (Number(it.price) || 0) * q;
+      const cst = (Number(it.cost) || 0) * q;
+      cogs += cst; units += q;
+      const key = (it.brand_name || it.generic_name || 'Item') + (it.dosage && it.dosage !== 'N/A' ? ' ' + it.dosage : '');
+      const e = byProduct[key] || (byProduct[key] = { qty: 0, revenue: 0, profit: 0 });
+      e.qty += q; e.revenue += rev; e.profit += (rev - cst);
+    });
+  });
+  const grossProfit = netSales - cogs;
+  return { tx, netSales, cogs, units, grossProfit,
+    margin: netSales > 0 ? grossProfit / netSales * 100 : 0,
+    txCount: tx.length, avgBasket: tx.length ? netSales / tx.length : 0, byProduct };
+}
+
+// Bucket net sales over time: daily (≤30d), weekly (90d), or monthly (all).
+function bucketSales(tx) {
+  const mode = (insightsPeriodDays === 7 || insightsPeriodDays === 30) ? 'day'
+             : (insightsPeriodDays === 90) ? 'week' : 'month';
+  const sums = {};
+  tx.forEach(t => {
+    if (!t.date) return;
+    const d = new Date(t.date + 'T00:00:00');
+    let key, label;
+    if (mode === 'day')        { key = t.date;                 label = (d.getMonth()+1) + '/' + d.getDate(); }
+    else if (mode === 'week')  { const ws = weekStart(d); key = isoDate(ws); label = (ws.getMonth()+1) + '/' + ws.getDate(); }
+    else                       { key = t.date.slice(0,7);      label = INS_MONTHS[d.getMonth()] + " '" + String(d.getFullYear()).slice(2); }
+    if (!sums[key]) sums[key] = { label, value: 0, key };
+    sums[key].value += Number(t.total) || 0;
+  });
+
+  if (mode === 'day') {
+    // Fill missing days with 0 so the line of bars is continuous.
+    const startStr = insightsWindowStartStr();
+    const startD = startStr ? new Date(startStr + 'T00:00:00')
+                            : (tx.length ? new Date(Math.min(...tx.map(t => +new Date(t.date + 'T00:00:00')))) : new Date());
+    const end = new Date(); end.setHours(0,0,0,0);
+    const out = [];
+    for (let d = new Date(startD); d <= end; d.setDate(d.getDate()+1)) {
+      const k = isoDate(d);
+      out.push(sums[k] || { label: (d.getMonth()+1) + '/' + d.getDate(), value: 0, key: k });
+    }
+    return { mode, buckets: out };
+  }
+  return { mode, buckets: Object.values(sums).sort((a, b) => a.key < b.key ? -1 : 1) };
+}
+
+function svgBars(buckets) {
+  if (!buckets.length) return '<div class="ins-empty">Wala pang benta sa panahong ito.</div>';
+  const H = 168, pad = 22, bwUnit = 30;
+  const W = Math.max(buckets.length * bwUnit, 280);
+  const max = Math.max(...buckets.map(b => b.value), 1);
+  const bw = (W - pad*2) / buckets.length;
+  const step = Math.ceil(buckets.length / 8);
+  let bars = '', labels = '';
+  buckets.forEach((b, i) => {
+    const h = (b.value / max) * (H - pad*2);
+    const x = pad + i*bw + bw*0.15;
+    const y = H - pad - h;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${Math.max(h,0).toFixed(1)}" rx="3" fill="url(#insGrad)"><title>${esc(b.label)}: ${peso(b.value)}</title></rect>`;
+    if (i % step === 0 || i === buckets.length-1) {
+      labels += `<text x="${(pad + i*bw + bw/2).toFixed(1)}" y="${H-5}" text-anchor="middle" class="ins-axis">${esc(b.label)}</text>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMid meet" class="ins-svg" style="min-width:${W}px;">
+    <defs><linearGradient id="insGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#c4b5fd"/></linearGradient></defs>
+    ${bars}${labels}</svg>`;
+}
+
+function renderInsightsKpis(k) {
+  const el = document.getElementById('insightsKpis');
+  if (!el) return;
+  el.innerHTML =
+    `<div class="stat-card"><div class="slabel">Net Sales</div><div class="sval">${peso(k.netSales)}</div></div>
+     <div class="stat-card"><div class="slabel">Est. Kita</div><div class="sval ${k.grossProfit < 0 ? 'red' : ''}">${peso(k.grossProfit)}</div></div>
+     <div class="stat-card"><div class="slabel">Margin</div><div class="sval">${k.margin.toFixed(1)}%</div></div>
+     <div class="stat-card"><div class="slabel">Transactions</div><div class="sval">${k.txCount}</div></div>
+     <div class="stat-card"><div class="slabel">Avg Basket</div><div class="sval">${peso(k.avgBasket)}</div></div>`;
+}
+
+function renderInsightsTop(byProduct) {
+  const host = document.getElementById('insTop');
+  if (!host) return;
+  const arr = Object.keys(byProduct).map(name => Object.assign({ name }, byProduct[name]))
+    .sort((a, b) => b.qty - a.qty).slice(0, 10);
+  if (!arr.length) { host.innerHTML = '<div class="ins-empty">Wala pang benta.</div>'; return; }
+  const max = Math.max(...arr.map(a => a.qty), 1);
+  host.innerHTML = arr.map(a =>
+    `<div class="ins-top-row">
+       <div class="ins-top-name" title="${esc(a.name)}">${esc(a.name)}</div>
+       <div class="ins-top-bar"><div class="ins-top-fill" style="width:${(a.qty/max*100).toFixed(1)}%"></div></div>
+       <div class="ins-top-val">${a.qty}<span class="ins-top-sub"> · ${peso(a.revenue)}</span></div>
+     </div>`).join('');
+}
+
+function renderInsights() {
+  if (!insightsEnabled()) return;
+  const a = aggregateInsights();
+  renderInsightsKpis(a);
+  const { mode, buckets } = bucketSales(a.tx);
+  const sub = document.getElementById('insTrendSub');
+  if (sub) sub.textContent = mode === 'day' ? 'araw-araw' : (mode === 'week' ? 'kada linggo' : 'buwan-buwan');
+  const trend = document.getElementById('insTrend');
+  if (trend) trend.innerHTML = svgBars(buckets);
+  renderInsightsTop(a.byProduct);
+}
+window.renderInsights = renderInsights;
+
+function printInsightsReport() {
+  const a = aggregateInsights();
+  const top = Object.keys(a.byProduct).map(name => Object.assign({ name }, a.byProduct[name]))
+    .sort((x, y) => y.qty - x.qty).slice(0, 15);
+  const periodLabel = insightsPeriodDays === 'all' ? 'Lahat ng panahon' : ('Huling ' + insightsPeriodDays + ' araw');
+  const rows = top.map((t, i) =>
+    `<tr><td>${i+1}</td><td>${esc(t.name)}</td><td style="text-align:right">${t.qty}</td><td style="text-align:right">${peso(t.revenue)}</td><td style="text-align:right">${peso(t.profit)}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  if (!w) { toast('I-allow ang pop-up para ma-print ang report.', 'error'); return; }
+  w.document.write(
+    `<!doctype html><html><head><meta charset="utf-8"><title>Pharmetriks — Insights Report</title>
+     <style>body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#1e0a47;padding:28px;max-width:740px;margin:auto}
+     h1{font-size:20px;margin:0 0 2px}.sub{color:#7c3aed;font-size:12px;margin-bottom:18px}
+     .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+     .k{border:1px solid #eee;border-radius:10px;padding:10px 14px;min-width:128px}
+     .k .l{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;font-weight:700}
+     .k .v{font-size:17px;font-weight:800;margin-top:3px}
+     table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+     th,td{padding:6px 8px;border-bottom:1px solid #eee;text-align:left}
+     th{color:#7c3aed;font-size:11px;text-transform:uppercase}
+     .foot{margin-top:18px;color:#94a3b8;font-size:11px}</style></head><body>
+     <h1>Charts &amp; Insights</h1>
+     <div class="sub">${periodLabel} · Na-print ${esc(new Date().toLocaleString('en-PH'))}</div>
+     <div class="kpis">
+       <div class="k"><div class="l">Net Sales</div><div class="v">${peso(a.netSales)}</div></div>
+       <div class="k"><div class="l">Est. Kita</div><div class="v">${peso(a.grossProfit)}</div></div>
+       <div class="k"><div class="l">Margin</div><div class="v">${a.margin.toFixed(1)}%</div></div>
+       <div class="k"><div class="l">Transactions</div><div class="v">${a.txCount}</div></div>
+       <div class="k"><div class="l">Avg Basket</div><div class="v">${peso(a.avgBasket)}</div></div>
+     </div>
+     <h3 style="font-size:14px;margin:0 0 4px">Top Sellers</h3>
+     <table><thead><tr><th>#</th><th>Produkto</th><th style="text-align:right">Units</th><th style="text-align:right">Revenue</th><th style="text-align:right">Est. Kita</th></tr></thead>
+     <tbody>${rows || '<tr><td colspan="5">Walang benta sa panahong ito.</td></tr>'}</tbody></table>
+     <div class="foot">Generated by Pharmetriks · Est. Kita = Net Sales − COGS (bago ang ibang operating expenses)</div>
+     </body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+}
 
 function openInvModal(id) {
   if (id) {
@@ -2506,6 +2752,7 @@ renderSales();
 renderOpexStats();
 renderSalesLog();
 renderExpenses();
+applyInsightsVisibility();  // reveal the Insights tab if cached features include it
 
 // ══════════════════ GUIDED TOUR (spotlight) ══════════════════
 const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
@@ -3010,6 +3257,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.PHARMETRIKS_SYNC && window.PHARMETRIKS_SYNC.onFeaturesReady) window.PHARMETRIKS_SYNC.onFeaturesReady();
         if (window.applyDiscountVisibility) window.applyDiscountVisibility();
         if (window.renderSmartAlerts) window.renderSmartAlerts();
+        if (window.applyInsightsVisibility) window.applyInsightsVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -3049,6 +3297,15 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     var f = (loadLicense() || {}).features || window.PHARMETRIKS_FEATURES || {};
     return f[key] === true;
   };
+
+  // Apply add-on UI gating from the cached license immediately, so entitled
+  // features (Insights tab, discount UI, smart alerts) appear on load even
+  // before the network verify finishes — and while fully offline.
+  try {
+    if (window.applyDiscountVisibility) window.applyDiscountVisibility();
+    if (window.applyInsightsVisibility) window.applyInsightsVisibility();
+    if (window.renderSmartAlerts) window.renderSmartAlerts();
+  } catch (e) {}
 
   // Expose minimal hooks for the future Next.js wrapper to drive auth state.
   window.PHARMETRIKS_AUTH = {
@@ -3277,6 +3534,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   <div class="mob-tab" id="mobtab-opex" onclick="switchTab('opex')">
     <svg class="ic mob-tab-icon"><use href="#i-opex"/></svg>
     <span>OPEX</span>
+  </div>
+  <div class="mob-tab" id="mobtab-insights" onclick="switchTab('insights')" style="display:none;">
+    <svg class="ic mob-tab-icon"><use href="#i-chart"/></svg>
+    <span>Insights</span>
   </div>
 </nav>
 
