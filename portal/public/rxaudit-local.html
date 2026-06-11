@@ -973,6 +973,10 @@
     <div class="nav-item" data-tab="utang" id="navUtang" onclick="switchTab('utang')" style="display:none;">
       <svg class="ic"><use href="#i-wallet"/></svg> Utang
     </div>
+    <!-- Reports tab (add-on: 'reports_pack'). Hidden unless entitled. -->
+    <div class="nav-item" data-tab="reports" id="navReports" onclick="switchTab('reports')" style="display:none;">
+      <svg class="ic"><use href="#i-receipt"/></svg> Reports
+    </div>
   </nav>
 
   <button class="guide-btn" onclick="startTour()" aria-label="Open guided tour">
@@ -1203,6 +1207,30 @@
     .ledger-amt.payment { color:#16a34a; }
     .ledger-del { border:none; background:none; cursor:pointer; color:#cbd5e1; font-size:18px; line-height:1; padding:0 4px; }
     .ledger-del:hover { color:#dc2626; }
+
+    /* ── Reports & Sulit ── */
+    .rep-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .rep-head strong { font-size:14px; color:#1e0a47; }
+    .rep-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .rep-controls input { width:auto; }
+    .rep-toplabel { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#94a3b8; margin:10px 0 4px; }
+    .rep-toprow { display:flex; justify-content:space-between; font-size:12.5px; color:#374151; padding:3px 0; border-bottom:1px solid #f1edfb; }
+    .pl-row { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#374151; padding:7px 0; border-bottom:1px solid #f1edfb; }
+    .pl-row.sub { color:#94a3b8; font-size:12px; }
+    .pl-row.total { font-weight:800; color:#1e0a47; border-top:1px solid #e5e1f5; border-bottom:none; }
+    .pl-row.grand { font-weight:900; color:#1e0a47; font-size:14.5px; border-top:2px solid #1e0a47; border-bottom:none; margin-top:2px; }
+    .pl-row b.pos { color:#16a34a; }
+    .pl-row b.neg { color:#dc2626; }
+    .pl-foot { margin-top:8px; font-size:11.5px; color:#94a3b8; }
+
+    /* ── Price List ── */
+    .pricelist-body { max-height:50vh; overflow:auto; }
+    .pricelist-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid #f1edfb; }
+    .pl-name { font-size:12.5px; color:#1e0a47; }
+    .pl-name b { font-weight:700; }
+    .pl-brand { color:#7c3aed; font-weight:600; }
+    .pl-dose { color:#94a3b8; }
+    .pl-price { flex:0 0 auto; font-size:13px; font-weight:800; color:#1e0a47; font-variant-numeric:tabular-nums; }
   </style>
 
   <!-- ════ INVENTORY ════ -->
@@ -1225,6 +1253,8 @@
         <button class="btn btn-primary btn-sm" onclick="openInvModal()" data-tour="inv-add"><svg class="ic ic-sm"><use href="#i-plus"/></svg> Add Product</button>
         <button class="btn btn-secondary btn-sm" onclick="openInvImportModal()"><svg class="ic ic-sm"><use href="#i-upload"/></svg> Import CSV</button>
         <button class="btn btn-secondary btn-sm" onclick="exportInventoryCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+        <!-- Price List (add-on: 'price_list'). Hidden unless entitled. -->
+        <button class="btn btn-secondary btn-sm" id="priceListBtn" onclick="openPriceList()" style="display:none;"><svg class="ic ic-sm"><use href="#i-receipt"/></svg> Price List</button>
       </div>
     </div>
 
@@ -1378,6 +1408,37 @@
     </div>
 
     <div id="sukiList"></div>
+  </div>
+
+  <!-- ════ REPORTS & SULIT (add-on: 'reports_pack') ════ -->
+  <div id="panel-reports" class="panel">
+    <div class="section-header">
+      <h2>Reports &amp; Sulit</h2>
+      <p>Daily sulit, monthly P&amp;L, at one-tap report — alam mo agad kung kumita.</p>
+    </div>
+
+    <div class="ins-card">
+      <div class="rep-head">
+        <strong>Daily Sulit</strong>
+        <div class="rep-controls">
+          <input type="date" id="repDay" onchange="renderReports()">
+          <button class="btn btn-secondary btn-sm" onclick="printDailySulit()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Print</button>
+        </div>
+      </div>
+      <div class="stats-row" id="repDayKpis"></div>
+      <div id="repDayTop"></div>
+    </div>
+
+    <div class="ins-card">
+      <div class="rep-head">
+        <strong>Monthly P&amp;L</strong>
+        <div class="rep-controls">
+          <input type="month" id="repMonth" onchange="renderReports()">
+          <button class="btn btn-secondary btn-sm" onclick="printMonthlyPL()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Print</button>
+        </div>
+      </div>
+      <div id="repPL"></div>
+    </div>
   </div>
 
   <!-- Mobile-only upgrade CTA -->
@@ -1611,6 +1672,24 @@
   </div>
 </div>
 
+<!-- ══════════════════════ PRICE LIST / CATALOG MODAL ══════════════════════ -->
+<div class="modal-overlay" id="priceListModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">
+    <div class="suki-detail-head">
+      <h2 style="margin:0;">Price List</h2>
+      <div class="rep-controls">
+        <button class="btn btn-secondary btn-sm" onclick="copyPriceList()">Copy text</button>
+        <button class="btn btn-secondary btn-sm" onclick="printPriceList()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Print</button>
+      </div>
+    </div>
+    <input type="text" id="priceListSearch" placeholder="Hanapin ang produkto…" oninput="renderPriceList()" style="width:100%;margin-bottom:10px;">
+    <div id="priceListBody" class="pricelist-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('priceListModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1677,7 +1756,7 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ══════════════════ SIDEBAR NAV ══════════════════
-const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang'];
+const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports'];
 
 function switchTab(name) {
   document.querySelectorAll('.nav-item[data-tab]').forEach(t => {
@@ -1696,6 +1775,7 @@ function switchTab(name) {
   if (name === 'opex')       { renderOpexStats(); renderSalesLog(); renderExpenses(); }
   if (name === 'insights')   { renderInsights(); }
   if (name === 'utang')      { renderUtang(); }
+  if (name === 'reports')    { renderReports(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -2267,6 +2347,194 @@ function deleteEntry(id) {
   toast('Nabura ang record.');
 }
 window.renderUtang = renderUtang;
+
+// ══════════════════ REPORTS & SULIT PACK (add-on: 'reports_pack') ══════════════════
+function reportsEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('reports_pack')); }
+
+function applyReportsVisibility() {
+  const on = reportsEnabled();
+  const nav = document.getElementById('navReports');
+  const mob = document.getElementById('mobtab-reports');
+  if (nav) nav.style.display = on ? '' : 'none';
+  if (mob) mob.style.display = on ? '' : 'none';
+  const panel = document.getElementById('panel-reports');
+  if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
+}
+window.applyReportsVisibility = applyReportsVisibility;
+
+// One day's figures from salesData/expData/utangData.
+function dayReport(dateStr) {
+  let net = 0, cogs = 0, txCount = 0;
+  const byProduct = {};
+  (salesData || []).forEach(t => {
+    if (t.date !== dateStr) return;
+    txCount++; net += Number(t.total) || 0;
+    (t.items || []).forEach(it => {
+      const q = Number(it.qty) || 0;
+      cogs += (Number(it.cost) || 0) * q;
+      const key = (it.brand_name || it.generic_name || 'Item') + (it.dosage && it.dosage !== 'N/A' ? ' ' + it.dosage : '');
+      byProduct[key] = (byProduct[key] || 0) + q;
+    });
+  });
+  const expenses = (expData || []).filter(e => e.date === dateStr).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  let utangAdded = 0;
+  (typeof utangData !== 'undefined' ? utangData : []).forEach(e => {
+    if (e.date === dateStr && e.kind !== 'payment') utangAdded += Number(e.amount) || 0;
+  });
+  return { net, cogs, grossProfit: net - cogs, expenses, utangAdded, txCount, byProduct };
+}
+
+// One month's P&L (ym = 'YYYY-MM').
+function monthReport(ym) {
+  let net = 0, cogs = 0, txCount = 0;
+  (salesData || []).forEach(t => {
+    if (!t.date || t.date.slice(0, 7) !== ym) return;
+    txCount++; net += Number(t.total) || 0;
+    (t.items || []).forEach(it => { cogs += (Number(it.cost) || 0) * (Number(it.qty) || 0); });
+  });
+  const opex = (expData || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const grossProfit = net - cogs;
+  return { net, cogs, grossProfit, opex, netProfit: grossProfit - opex, txCount, margin: net > 0 ? grossProfit / net * 100 : 0 };
+}
+
+function renderReports() {
+  if (!reportsEnabled()) return;
+  const dayEl = document.getElementById('repDay');
+  const monEl = document.getElementById('repMonth');
+  if (dayEl && !dayEl.value) dayEl.value = today();
+  if (monEl && !monEl.value) monEl.value = today().slice(0, 7);
+  const dateStr = (dayEl && dayEl.value) || today();
+  const ym = (monEl && monEl.value) || today().slice(0, 7);
+
+  // Daily Sulit
+  const d = dayReport(dateStr);
+  const utangOn = !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('utang_tracker'));
+  const dayKpis = document.getElementById('repDayKpis');
+  if (dayKpis) dayKpis.innerHTML =
+    `<div class="stat-card"><div class="slabel">Benta</div><div class="sval">${peso(d.net)}</div></div>
+     <div class="stat-card"><div class="slabel">Tinatayang Kita</div><div class="sval ${d.grossProfit < 0 ? 'red' : ''}">${peso(d.grossProfit)}</div></div>
+     <div class="stat-card"><div class="slabel">Gastos</div><div class="sval ${d.expenses > 0 ? 'yellow' : ''}">${peso(d.expenses)}</div></div>
+     <div class="stat-card"><div class="slabel">Transactions</div><div class="sval">${d.txCount}</div></div>
+     ${utangOn ? `<div class="stat-card"><div class="slabel">Utang ngayon</div><div class="sval ${d.utangAdded > 0 ? 'red' : ''}">${peso(d.utangAdded)}</div></div>` : ''}`;
+  const top = Object.keys(d.byProduct).map(n => ({ n, q: d.byProduct[n] })).sort((a, b) => b.q - a.q).slice(0, 5);
+  const dayTop = document.getElementById('repDayTop');
+  if (dayTop) dayTop.innerHTML = top.length
+    ? '<div class="rep-toplabel">Top sellers ngayon</div>' + top.map(t => `<div class="rep-toprow"><span>${esc(t.n)}</span><b>${t.q}</b></div>`).join('')
+    : '<div class="ins-empty">Walang benta sa araw na ito.</div>';
+
+  // Monthly P&L
+  const m = monthReport(ym);
+  const pl = document.getElementById('repPL');
+  if (pl) pl.innerHTML =
+    `<div class="pl-row"><span>Net Sales</span><b>${peso(m.net)}</b></div>
+     <div class="pl-row sub"><span>− COGS (puhunan ng nabenta)</span><b>${peso(m.cogs)}</b></div>
+     <div class="pl-row total"><span>= Gross Profit</span><b class="${m.grossProfit < 0 ? 'neg' : 'pos'}">${peso(m.grossProfit)}</b></div>
+     <div class="pl-row sub"><span>− OPEX (gastos)</span><b>${peso(m.opex)}</b></div>
+     <div class="pl-row grand"><span>= Net Profit</span><b class="${m.netProfit < 0 ? 'neg' : 'pos'}">${peso(m.netProfit)}</b></div>
+     <div class="pl-foot">Margin: ${m.margin.toFixed(1)}% · ${m.txCount} transactions</div>`;
+}
+window.renderReports = renderReports;
+
+function openPrintWindow(title, bodyHtml) {
+  const w = window.open('', '_blank');
+  if (!w) { toast('I-allow ang pop-up para ma-print.', 'error'); return; }
+  w.document.write(
+    `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+     <style>body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#1e0a47;padding:28px;max-width:640px;margin:auto}
+     h1{font-size:19px;margin:0 0 2px}h3{font-size:14px;margin:14px 0 4px}.sub{color:#7c3aed;font-size:12px;margin-bottom:16px}
+     .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:13px}
+     .row.total{font-weight:800;border-top:2px solid #1e0a47;border-bottom:none;margin-top:4px}
+     .neg{color:#dc2626}.pos{color:#16a34a}.foot{margin-top:16px;color:#94a3b8;font-size:11px}</style>
+     </head><body>${bodyHtml}<div class="foot">Generated by Pharmetriks · ${esc(new Date().toLocaleString('en-PH'))}</div></body></html>`);
+  w.document.close(); w.focus();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
+}
+
+function printDailySulit() {
+  const dateStr = (document.getElementById('repDay').value) || today();
+  const d = dayReport(dateStr);
+  const top = Object.keys(d.byProduct).map(n => ({ n, q: d.byProduct[n] })).sort((a, b) => b.q - a.q).slice(0, 10);
+  const body = `<h1>Daily Sulit</h1><div class="sub">${esc(dateStr)}</div>
+    <div class="row"><span>Benta (net sales)</span><b>${peso(d.net)}</b></div>
+    <div class="row"><span>Tinatayang kita (sales − COGS)</span><b>${peso(d.grossProfit)}</b></div>
+    <div class="row"><span>Gastos</span><b>${peso(d.expenses)}</b></div>
+    <div class="row"><span>Utang naidagdag</span><b>${peso(d.utangAdded)}</b></div>
+    <div class="row total"><span>Transactions</span><b>${d.txCount}</b></div>
+    ${top.length ? '<h3>Top sellers</h3>' + top.map(t => `<div class="row"><span>${esc(t.n)}</span><b>${t.q}</b></div>`).join('') : ''}`;
+  openPrintWindow('Pharmetriks — Daily Sulit', body);
+}
+
+function printMonthlyPL() {
+  const ym = (document.getElementById('repMonth').value) || today().slice(0, 7);
+  const m = monthReport(ym);
+  const body = `<h1>Monthly P&amp;L</h1><div class="sub">${esc(ym)}</div>
+    <div class="row"><span>Net Sales</span><b>${peso(m.net)}</b></div>
+    <div class="row"><span>− COGS</span><b>${peso(m.cogs)}</b></div>
+    <div class="row total"><span>= Gross Profit</span><b class="${m.grossProfit < 0 ? 'neg' : 'pos'}">${peso(m.grossProfit)}</b></div>
+    <div class="row"><span>− OPEX (gastos)</span><b>${peso(m.opex)}</b></div>
+    <div class="row total"><span>= Net Profit</span><b class="${m.netProfit < 0 ? 'neg' : 'pos'}">${peso(m.netProfit)}</b></div>
+    <div style="margin-top:10px;color:#94a3b8;font-size:12px">Margin: ${m.margin.toFixed(1)}% · ${m.txCount} transactions</div>`;
+  openPrintWindow('Pharmetriks — Monthly P&L', body);
+}
+
+// ══════════════════ PRICE LIST / CATALOG (add-on: 'price_list') ══════════════════
+function priceListEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('price_list')); }
+
+function applyPriceListVisibility() {
+  const btn = document.getElementById('priceListBtn');
+  if (btn) btn.style.display = priceListEnabled() ? '' : 'none';
+}
+window.applyPriceListVisibility = applyPriceListVisibility;
+
+function priceListItems() {
+  const s = document.getElementById('priceListSearch');
+  const q = (s && s.value || '').toLowerCase();
+  return (invData || [])
+    .filter(p => [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f || '').toLowerCase().includes(q)))
+    .slice()
+    .sort((a, b) => (a.generic_name || '').localeCompare(b.generic_name || ''));
+}
+
+function openPriceList() {
+  if (!priceListEnabled()) return;
+  const s = document.getElementById('priceListSearch'); if (s) s.value = '';
+  renderPriceList();
+  document.getElementById('priceListModal').classList.add('open');
+}
+
+function renderPriceList() {
+  const host = document.getElementById('priceListBody');
+  if (!host) return;
+  const items = priceListItems();
+  if (!items.length) { host.innerHTML = '<div class="ins-empty">Walang produkto.</div>'; return; }
+  host.innerHTML = items.map(p =>
+    `<div class="pricelist-row">
+       <div class="pl-name"><b>${esc(p.generic_name || '')}</b>${p.brand_name ? ' <span class="pl-brand">' + esc(p.brand_name) + '</span>' : ''}${p.dosage && p.dosage !== 'N/A' ? ' <span class="pl-dose">' + esc(p.dosage) + '</span>' : ''}</div>
+       <div class="pl-price">${peso(p.price)}</div>
+     </div>`).join('');
+}
+
+function priceListText() {
+  return priceListItems().map(p => {
+    const name = [p.generic_name, p.brand_name, (p.dosage && p.dosage !== 'N/A' ? p.dosage : '')].filter(Boolean).join(' ');
+    return `${name} — ${peso(p.price)}`;
+  }).join('\n');
+}
+
+function copyPriceList() {
+  const text = 'PRICE LIST\n\n' + priceListText();
+  const done = () => toast('Na-copy ang price list ✓', 'success');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopyText(text, done));
+  else fallbackCopyText(text, done);
+}
+
+function printPriceList() {
+  const rows = priceListItems().map(p => {
+    const name = [p.generic_name, p.brand_name, (p.dosage && p.dosage !== 'N/A' ? p.dosage : '')].filter(Boolean).map(esc).join(' ');
+    return `<div class="row"><span>${name}</span><b>${peso(p.price)}</b></div>`;
+  }).join('');
+  openPrintWindow('Pharmetriks — Price List', `<h1>Price List</h1><div class="sub">${esc(today())}</div>${rows || '<div>Walang produkto.</div>'}`);
+}
 
 function openInvModal(id) {
   if (id) {
@@ -3094,6 +3362,8 @@ renderSalesLog();
 renderExpenses();
 applyInsightsVisibility();  // reveal the Insights tab if cached features include it
 applyUtangVisibility();      // reveal the Utang tab if cached features include it
+applyReportsVisibility();    // reveal the Reports tab if cached features include it
+applyPriceListVisibility();  // reveal the Price List button if cached features include it
 
 // ══════════════════ GUIDED TOUR (spotlight) ══════════════════
 const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
@@ -3600,6 +3870,8 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.renderSmartAlerts) window.renderSmartAlerts();
         if (window.applyInsightsVisibility) window.applyInsightsVisibility();
         if (window.applyUtangVisibility) window.applyUtangVisibility();
+        if (window.applyReportsVisibility) window.applyReportsVisibility();
+        if (window.applyPriceListVisibility) window.applyPriceListVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -3647,6 +3919,8 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     if (window.applyDiscountVisibility) window.applyDiscountVisibility();
     if (window.applyInsightsVisibility) window.applyInsightsVisibility();
     if (window.applyUtangVisibility) window.applyUtangVisibility();
+    if (window.applyReportsVisibility) window.applyReportsVisibility();
+    if (window.applyPriceListVisibility) window.applyPriceListVisibility();
     if (window.renderSmartAlerts) window.renderSmartAlerts();
   } catch (e) {}
 
@@ -3885,6 +4159,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   <div class="mob-tab" id="mobtab-utang" onclick="switchTab('utang')" style="display:none;">
     <svg class="ic mob-tab-icon"><use href="#i-wallet"/></svg>
     <span>Utang</span>
+  </div>
+  <div class="mob-tab" id="mobtab-reports" onclick="switchTab('reports')" style="display:none;">
+    <svg class="ic mob-tab-icon"><use href="#i-receipt"/></svg>
+    <span>Reports</span>
   </div>
 </nav>
 
