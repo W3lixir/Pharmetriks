@@ -20,7 +20,7 @@ const nextConfig = {
     return config;
   },
   // The PWA service worker, manifest, and icons are served from /public.
-  // The single-file RXaudit HTML is served at /app — see app/app/route.ts.
+  // The single-file Pharmetriks HTML is served at /app — see app/app/route.ts.
   async headers() {
     return [
       {

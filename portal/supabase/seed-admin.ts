@@ -98,7 +98,7 @@ async function main() {
       email: ADMIN_EMAIL,
       password: ADMIN_PASS,
       email_confirm: true,
-      user_metadata: { full_name: 'Karlit', pharmacy_name: 'RXaudit HQ' },
+      user_metadata: { full_name: 'Karlit', pharmacy_name: 'Pharmetriks HQ' },
     });
     if (createErr) throw createErr;
     userId = created.user!.id;
@@ -115,7 +115,7 @@ async function main() {
         id: userId!,
         email: ADMIN_EMAIL,
         full_name: 'Karlit',
-        pharmacy_name: 'RXaudit HQ',
+        pharmacy_name: 'Pharmetriks HQ',
         status: 'approved',
         approved_at: new Date().toISOString(),
         approved_by: userId,

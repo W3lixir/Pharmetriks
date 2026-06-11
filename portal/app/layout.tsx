@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'RXaudit — Offline pharmacy audit tool',
+  title: 'Pharmetriks — Offline pharmacy audit tool',
   description:
     'Track dispensing, inventory, and OPEX for your pharmacy. Works offline. ₱249 one-time, lifetime access.',
-  applicationName: 'RXaudit',
+  applicationName: 'Pharmetriks',
   appleWebApp: {
     capable: true,
-    title: 'RXaudit',
+    title: 'Pharmetriks',
     statusBarStyle: 'black-translucent',
   },
   formatDetection: { telephone: false },

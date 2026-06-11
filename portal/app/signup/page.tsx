@@ -2,7 +2,7 @@ import AuthShell from '@/components/auth/AuthShell';
 import HelpButton from '@/components/ui/HelpButton';
 import SignupForm from './SignupForm';
 
-export const metadata = { title: 'Sign up · RXaudit' };
+export const metadata = { title: 'Sign up · Pharmetriks' };
 
 export default function SignupPage() {
   return (

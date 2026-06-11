@@ -1,8 +1,8 @@
 import LegalShell from '@/components/legal/LegalShell';
 
 export const metadata = {
-  title: 'Terms of Service · RXaudit',
-  description: 'The contract between you and RXaudit — written in plain Taglish, hindi legalese.',
+  title: 'Terms of Service · Pharmetriks',
+  description: 'The contract between you and Pharmetriks — written in plain Taglish, hindi legalese.',
 };
 
 const SECTIONS = [
@@ -25,13 +25,13 @@ export default function TermsPage() {
     <LegalShell
       pill="Terms"
       title="Terms of Service"
-      subtitle="Yung kasunduan natin. Bago ka gumamit ng RXaudit, basahin mo muna."
+      subtitle="Yung kasunduan natin. Bago ka gumamit ng Pharmetriks, basahin mo muna."
       updatedAt="2026-05-15"
       sections={SECTIONS}
     >
       <h2 id="accept">Acceptance</h2>
       <p>
-        Pag nag-sign up ka or gumamit ng RXaudit, sumasang-ayon ka sa terms na
+        Pag nag-sign up ka or gumamit ng Pharmetriks, sumasang-ayon ka sa terms na
         ito. Kung hindi mo gusto ang terms, huwag mong gamitin ang service.
         Simple as that.
       </p>
@@ -53,7 +53,7 @@ export default function TermsPage() {
         <li>We encourage you to message us sa Facebook bago mag-bayad para masagot lahat ng tanong mo. May FAQ at features page din kami for reference.</li>
       </ul>
 
-      <h2 id="license">What you can do with RXaudit</h2>
+      <h2 id="license">What you can do with Pharmetriks</h2>
       <ul>
         <li>Gamitin sa <strong>commercial pharmacy operations</strong> mo</li>
         <li>I-install sa iba't ibang devices (phone, tablet, desktop) basta ikaw ang gumagamit</li>
@@ -102,12 +102,12 @@ export default function TermsPage() {
 
       <h2 id="warranty">Warranty disclaimer</h2>
       <p>
-        RXaudit ay provided <strong>"as is"</strong>. Walang warranty na siya'y
+        Pharmetriks ay provided <strong>"as is"</strong>. Walang warranty na siya'y
         perfect, bug-free, or sakto sa specific use case mo. Gawin mo ang sariling
         verification para sa accuracy.
       </p>
       <p>
-        <strong>RXaudit is a tool, hindi accounting or regulatory advice.</strong>{' '}
+        <strong>Pharmetriks is a tool, hindi accounting or regulatory advice.</strong>{' '}
         Yung legal compliance ng pharmacy operations mo (FDA, BIR, DOH, LGU
         permits, etc.) ay responsibility mo pa rin.
       </p>

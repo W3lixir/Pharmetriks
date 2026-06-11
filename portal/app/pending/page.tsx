@@ -8,7 +8,7 @@ import Icon from '@/components/ui/Icon';
 import GlassCard from '@/components/ui/GlassCard';
 import type { ProfileStatus } from '@/lib/auth';
 
-export const metadata = { title: 'Account status · RXaudit' };
+export const metadata = { title: 'Account status · Pharmetriks' };
 export const dynamic = 'force-dynamic';
 
 export default async function PendingPage() {

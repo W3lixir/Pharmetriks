@@ -6,8 +6,8 @@ import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
 
 export const metadata = {
-  title: 'About · RXaudit',
-  description: 'The story behind RXaudit — why we built an offline-first pharmacy audit tool.',
+  title: 'About · Pharmetriks',
+  description: 'The story behind Pharmetriks — why we built an offline-first pharmacy audit tool.',
 };
 
 const PRINCIPLES = [
@@ -44,7 +44,7 @@ export default function AboutPage() {
 
           <div className="relative mx-auto max-w-3xl px-4 sm:px-6 text-center">
             <Pill tone="pink">
-              <Icon name="sparkle" size={11} /> About RXaudit
+              <Icon name="sparkle" size={11} /> About Pharmetriks
             </Pill>
             <h1 className="mt-4 text-[32px] sm:text-5xl font-extrabold tracking-tight leading-[1.1]">
               Built by people who've actually{' '}
@@ -52,7 +52,7 @@ export default function AboutPage() {
               pharmacy audit tools.
             </h1>
             <p className="mt-5 text-[15px] sm:text-base font-medium text-ink-2/80 leading-relaxed">
-              RXaudit is a small, focused tool for Filipino pharmacy staff and owners.
+              Pharmetriks is a small, focused tool for Filipino pharmacy staff and owners.
               Walang complicated enterprise features na hindi mo naman gagamitin.
               Yung essentials lang — dispensing, inventory, OPEX — done right at usable
               kahit offline.
@@ -100,7 +100,7 @@ export default function AboutPage() {
               </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/signup" className="btn-primary text-[15px] px-5 py-3">
-                  Try RXaudit — ₱249
+                  Try Pharmetriks — ₱249
                   <Icon name="arrow-right" size={16} />
                 </Link>
                 <Link href="/contact" className="btn-ghost text-[15px] px-5 py-3">

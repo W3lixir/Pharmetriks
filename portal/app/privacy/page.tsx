@@ -1,9 +1,9 @@
 import LegalShell from '@/components/legal/LegalShell';
 
 export const metadata = {
-  title: 'Privacy Policy · RXaudit',
+  title: 'Privacy Policy · Pharmetriks',
   description:
-    'How RXaudit collects, uses, and protects your data. Pharmacy data stays on your device — we never touch it.',
+    'How Pharmetriks collects, uses, and protects your data. Pharmacy data stays on your device — we never touch it.',
 };
 
 const SECTIONS = [
@@ -136,7 +136,7 @@ export default function PrivacyPage() {
 
       <h2 id="children">Children</h2>
       <p>
-        RXaudit ay para sa licensed pharmacy staff and adult business owners.
+        Pharmetriks ay para sa licensed pharmacy staff and adult business owners.
         Hindi namin sadyang kinokolekta ang data ng mga under 18. Kung sa
         tingin mo may bata na nag-sign up, message us at i-delete agad namin.
       </p>

@@ -1,5 +1,5 @@
 -- ╔══════════════════════════════════════════════════════════════════════════╗
--- ║ RXaudit — initial schema                                                 ║
+-- ║ Pharmetriks — initial schema                                                 ║
 -- ║                                                                          ║
 -- ║ Tables                                                                   ║
 -- ║   profiles       extends auth.users — status, receipt, license expiry    ║

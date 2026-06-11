@@ -35,7 +35,7 @@ export default function Nav() {
           <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-lyna-cta text-white shadow-glass">
             <span className="font-extrabold text-[13px] tracking-tight">Rx</span>
           </span>
-          <span className="text-[15px] font-extrabold tracking-tight">RXaudit</span>
+          <span className="text-[15px] font-extrabold tracking-tight">Pharmetriks</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-7">

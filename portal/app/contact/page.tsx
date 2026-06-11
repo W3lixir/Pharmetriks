@@ -5,8 +5,8 @@ import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
 
 export const metadata = {
-  title: 'Contact · RXaudit',
-  description: 'Get in touch with RXaudit support — email, Messenger, or WhatsApp.',
+  title: 'Contact · Pharmetriks',
+  description: 'Get in touch with Pharmetriks support — email, Messenger, or WhatsApp.',
 };
 
 export default function ContactPage() {

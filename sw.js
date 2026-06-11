@@ -1,4 +1,4 @@
-/* RXaudit Service Worker
+/* Pharmetriks Service Worker
  * Strategy:
  *   - Precache the app shell (HTML, manifest, icons) on install.
  *   - Cache-first for precached/static assets.
@@ -8,7 +8,7 @@
  *
  * Bump SW_VERSION to roll out a new shell to existing installs.
  */
-const SW_VERSION    = 'rxaudit-v1.0.0';
+const SW_VERSION    = 'pharmetriks-v1.0.0';
 const SHELL_CACHE   = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const FONTS_CACHE   = `${SW_VERSION}-fonts`;
@@ -142,7 +142,7 @@ async function staleWhileRevalidate(req, cacheName) {
 function offlineFallbackHTML() {
   return `<!doctype html><html lang="en"><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RXaudit — Offline</title>
+<title>Pharmetriks — Offline</title>
 <style>
   body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;
        background:linear-gradient(180deg,#F2E6EE,#e3ddff);
@@ -157,6 +157,6 @@ function offlineFallbackHTML() {
 </style>
 <div class="card">
   <h1>You're offline</h1>
-  <p>RXaudit hasn't been installed yet. Connect to the internet at least once to set it up, then it works offline forever.</p>
+  <p>Pharmetriks hasn't been installed yet. Connect to the internet at least once to set it up, then it works offline forever.</p>
 </div></html>`;
 }

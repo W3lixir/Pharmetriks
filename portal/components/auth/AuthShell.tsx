@@ -22,7 +22,7 @@ export default function AuthShell({ pill, title, subtitle, children, width = 'sm
             <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-lyna-cta text-white shadow-glass">
               <span className="font-extrabold text-[13px]">Rx</span>
             </span>
-            <span className="text-[15px] font-extrabold tracking-tight">RXaudit</span>
+            <span className="text-[15px] font-extrabold tracking-tight">Pharmetriks</span>
           </Link>
           <Link
             href="/"

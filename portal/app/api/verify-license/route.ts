@@ -8,6 +8,7 @@ type VerifyResult = {
   valid: boolean;
   status: 'pending' | 'awaiting_payment' | 'approved' | 'rejected' | 'revoked' | 'no_session';
   expires_at: string | null;
+  features: Record<string, boolean>;
 };
 
 export async function POST(): Promise<NextResponse<VerifyResult>> {
@@ -15,17 +16,17 @@ export async function POST(): Promise<NextResponse<VerifyResult>> {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null });
+    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null, features: {} });
   }
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('status, license_expires_at')
+    .select('status, license_expires_at, features')
     .eq('id', user.id)
     .maybeSingle();
 
   if (!profile) {
-    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null });
+    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null, features: {} });
   }
 
   const expired = profile.license_expires_at
@@ -38,5 +39,6 @@ export async function POST(): Promise<NextResponse<VerifyResult>> {
     valid,
     status: profile.status as VerifyResult['status'],
     expires_at: profile.license_expires_at ?? null,
+    features: (profile.features ?? {}) as Record<string, boolean>,
   });
 }

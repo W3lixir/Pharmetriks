@@ -5,6 +5,10 @@
 *.env
 *.env.local
 
+# User PII / generated credentials from the bulk import — never commit.
+supabase/users-to-import.csv
+supabase/imported-credentials.csv
+
 # ─── Node / Next.js ─────────────────────────────────────────────────
 node_modules/
 .next/

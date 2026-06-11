@@ -3,7 +3,7 @@ import AuthShell from '@/components/auth/AuthShell';
 import HelpButton from '@/components/ui/HelpButton';
 import LoginForm from './LoginForm';
 
-export const metadata = { title: 'Log in · RXaudit' };
+export const metadata = { title: 'Log in · Pharmetriks' };
 
 export default function LoginPage() {
   return (
@@ -11,7 +11,7 @@ export default function LoginPage() {
       <AuthShell
         pill={{ tone: 'blue', label: 'Welcome back' }}
         title={<>Log in sa account mo</>}
-        subtitle="I-access ang RXaudit app, manage receipts, or check approval status."
+        subtitle="I-access ang Pharmetriks app, manage receipts, or check approval status."
       >
         <Suspense fallback={null}>
           <LoginForm />

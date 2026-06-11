@@ -2,8 +2,8 @@ import Link from 'next/link';
 import LegalShell from '@/components/legal/LegalShell';
 
 export const metadata = {
-  title: 'Refund Policy · RXaudit',
-  description: 'RXaudit is a one-time ₱249 purchase with no refunds. Here\'s why, and how to make sure it\'s right for you bago mag-bayad.',
+  title: 'Refund Policy · Pharmetriks',
+  description: 'Pharmetriks is a one-time ₱249 purchase with no refunds. Here\'s why, and how to make sure it\'s right for you bago mag-bayad.',
 };
 
 const SECTIONS = [
@@ -41,7 +41,7 @@ export default function RefundPolicyPage() {
         Sa halip, ginawa naming complete yung public info bago mag-bayad —
         features page, FAQ, screenshots, at install guide. Plus may Facebook
         page kami kung saan kami sumasagot ng questions. Ang goal: ma-decide mo
-        nang maayos kung para sa'yo ang RXaudit bago mo ibigay ang ₱249 mo.
+        nang maayos kung para sa'yo ang Pharmetriks bago mo ibigay ang ₱249 mo.
       </p>
 
       <h2 id="before">Bago mag-bayad — check muna these</h2>

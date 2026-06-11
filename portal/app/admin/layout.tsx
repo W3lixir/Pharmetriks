@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <span className="font-extrabold text-[13px]">Rx</span>
             </span>
             <div className="leading-tight">
-              <div className="text-[14.5px] font-extrabold tracking-tight">RXaudit</div>
+              <div className="text-[14.5px] font-extrabold tracking-tight">Pharmetriks</div>
               <div className="text-[10px] font-extrabold uppercase tracking-[1.5px] text-accent">Admin</div>
             </div>
           </Link>

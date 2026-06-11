@@ -1,4 +1,4 @@
-# RXaudit
+# Pharmetriks
 
 Offline-first pharmacy audit tool for Filipino pharmacy staff. Sold for **₱249 one-time, lifetime access** via manual GCash payment.
 
@@ -85,7 +85,7 @@ npm run dev
 ```
 
 - `http://localhost:3000/` — placeholder landing page (Phase 3 will replace this)
-- `http://localhost:3000/app` — the RXaudit PWA, served from `rxaudit-local.html`
+- `http://localhost:3000/app` — the Pharmetriks PWA, served from `rxaudit-local.html`
 - `http://localhost:3000/api/verify-license` — returns a stub for now (always-valid in dev)
 
 The service worker registers on first visit, caches the shell, and serves the app offline thereafter.
@@ -95,7 +95,7 @@ The service worker registers on first visit, caches the shell, and serves the ap
 - Connect the repo to Vercel.
 - Add the env vars from `.env.local` to the Vercel project (Settings → Environment Variables).
 - Set the **Root Directory** to `portal/`.
-- Default Vercel domain: `rxaudit-portal.vercel.app` (or similar). Custom domain optional.
+- Default Vercel domain: `pharmetriks-portal.vercel.app` (or similar). Custom domain optional.
 
 ## Security notes
 

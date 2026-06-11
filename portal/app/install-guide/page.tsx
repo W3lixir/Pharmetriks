@@ -6,8 +6,8 @@ import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
 
 export const metadata = {
-  title: 'Install Guide · RXaudit',
-  description: 'How to install RXaudit as an app on your phone — iOS Safari and Android Chrome.',
+  title: 'Install Guide · Pharmetriks',
+  description: 'How to install Pharmetriks as an app on your phone — iOS Safari and Android Chrome.',
 };
 
 export default function InstallGuidePage() {
@@ -23,10 +23,10 @@ export default function InstallGuidePage() {
               <Icon name="install" size={11} /> Install guide
             </Pill>
             <h1 className="mt-4 text-[28px] sm:text-4xl font-extrabold tracking-tight">
-              I-install ang RXaudit bilang app
+              I-install ang Pharmetriks bilang app
             </h1>
             <p className="mt-3 text-[14.5px] font-medium text-ink-2/80 leading-relaxed">
-              Para offline ka gumagana, kailangan i-install muna ang RXaudit sa
+              Para offline ka gumagana, kailangan i-install muna ang Pharmetriks sa
               phone mo. Step-by-step para sa iOS at Android.
             </p>
           </div>
@@ -47,7 +47,7 @@ export default function InstallGuidePage() {
                 <Step n={2}>Tap ang <strong>Share button</strong> (yung square with arrow up).</Step>
                 <Step n={3}>Scroll down at piliin ang <strong>Add to Home Screen</strong>.</Step>
                 <Step n={4}>Tap <strong>Add</strong> sa top-right corner.</Step>
-                <Step n={5}>Hanapin ang RXaudit icon sa home screen mo at i-tap para buksan.</Step>
+                <Step n={5}>Hanapin ang Pharmetriks icon sa home screen mo at i-tap para buksan.</Step>
               </ol>
             </GlassCard>
 
@@ -64,7 +64,7 @@ export default function InstallGuidePage() {
                 <Step n={2}>Tap ang <strong>3-dot menu</strong> sa kanang taas.</Step>
                 <Step n={3}>Piliin ang <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</Step>
                 <Step n={4}>Tap <strong>Install</strong> sa pop-up.</Step>
-                <Step n={5}>Hanapin ang RXaudit icon sa home screen or app drawer.</Step>
+                <Step n={5}>Hanapin ang Pharmetriks icon sa home screen or app drawer.</Step>
               </ol>
             </GlassCard>
           </div>

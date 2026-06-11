@@ -43,7 +43,7 @@ export default function Footer() {
               <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-lyna-cta text-white shadow-glass">
                 <span className="font-extrabold text-[14px]">Rx</span>
               </span>
-              <span className="text-[16px] font-extrabold tracking-tight">RXaudit</span>
+              <span className="text-[16px] font-extrabold tracking-tight">Pharmetriks</span>
             </Link>
             <p className="mt-4 text-[13px] text-ink-2/75 font-medium leading-relaxed max-w-xs">
               Offline-first pharmacy audit tool. Built for Filipino pharmacy
@@ -139,7 +139,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-10 pt-6 border-t border-white/55 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 text-center">
           <p className="text-[11.5px] text-ink-2/60 font-semibold">
-            © {year} RXaudit · {version} · All rights reserved.
+            © {year} Pharmetriks · {version} · All rights reserved.
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 justify-center text-[11.5px] font-semibold text-ink-2/60">
             <Link href="/privacy" className="hover:text-ink">Privacy</Link>

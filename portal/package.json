@@ -1,5 +1,5 @@
 {
-  "name": "rxaudit-portal",
+  "name": "pharmetriks-portal",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "seed:admin": "tsx supabase/seed-admin.ts"
+    "seed:admin": "tsx supabase/seed-admin.ts",
+    "import:users": "tsx supabase/import-users.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

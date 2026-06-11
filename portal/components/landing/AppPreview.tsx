@@ -2,7 +2,7 @@ import Icon from '@/components/ui/Icon';
 
 /**
  * A stylized phone frame containing a faithful mini-render of the
- * RXaudit dispensing screen. Pure CSS/SVG — no images, scales cleanly.
+ * Pharmetriks dispensing screen. Pure CSS/SVG — no images, scales cleanly.
  */
 export default function AppPreview() {
   return (
@@ -28,7 +28,7 @@ export default function AppPreview() {
                 <span className="text-[9px] font-extrabold">Rx</span>
               </div>
               <div className="flex-1">
-                <div className="text-[11px] font-extrabold leading-none">RXaudit</div>
+                <div className="text-[11px] font-extrabold leading-none">Pharmetriks</div>
                 <div className="text-[8.5px] text-white/60 mt-0.5">Offline Pharmacy</div>
               </div>
               <div className="h-5 w-5 rounded-full bg-accent-soft/30 border border-white/25 grid place-items-center">
