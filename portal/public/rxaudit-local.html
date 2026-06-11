@@ -2920,6 +2920,16 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   function loadTombs() { try { return JSON.parse(localStorage.getItem(TOMB_KEY) || '{}'); } catch (e) { return {}; } }
   function saveTombs(t) { try { localStorage.setItem(TOMB_KEY, JSON.stringify(t)); } catch (e) {} }
   function recTs(r) { return (r && Date.parse(r.updated_at || r.created_at)) || 0; }
+  // Order-independent fingerprint of a collection (id→latest-ts) and of a
+  // tombstone map, used to decide whether a pulled collection actually differs
+  // from what we already have — so we don't push (and bump versions) needlessly.
+  function sig(arr) {
+    return (Array.isArray(arr) ? arr : []).filter(function (r) { return r && r.id; })
+      .map(function (r) { return r.id + ':' + recTs(r); }).sort().join('|');
+  }
+  function tombSig(t) {
+    return Object.keys(t || {}).map(function (id) { return id + ':' + t[id]; }).sort().join('|');
+  }
 
   function mergeItems(localArr, remoteArr, tombs) {
     var byId = {};
@@ -3003,15 +3013,23 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         .then(function (r) { if (!r.ok) throw new Error('pull ' + r.status); return r.json(); })
         .then(function (data) {
           var all = loadTombs();
+          var toPush = [];
           COLLECTIONS.forEach(function (key) {
             var rem = data[key] || { items: [], tombstones: {}, version: 0 };
             versions[key] = rem.version || 0;
             all[key] = mergeTombs(all[key] || {}, rem.tombstones || {});
-            self.applyMerged(key, mergeItems(localItems(key), rem.items || [], all[key]));
+            var merged = mergeItems(localItems(key), rem.items || [], all[key]);
+            // Only push back if WE contributed something the server didn't have
+            // (local-only items or tombstones). Otherwise polling would bump the
+            // version forever and flicker the badge on both devices.
+            if (sig(merged) !== sig(rem.items || []) || tombSig(all[key]) !== tombSig(rem.tombstones || {})) {
+              toPush.push(key);
+            }
+            self.applyMerged(key, merged);
           });
           saveTombs(all);
           setBadge('synced');
-          COLLECTIONS.forEach(function (key) { self.scheduleSync(key, 0); }); // push union back
+          toPush.forEach(function (key) { self.scheduleSync(key, 0); });
         })
         .catch(function () { setBadge('offline'); });
     },
@@ -3056,6 +3074,29 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   if (document.readyState === 'complete') setTimeout(boot, 0);
   else window.addEventListener('load', function () { setTimeout(boot, 0); });
   window.addEventListener('online', function () { didInitialPull = false; Sync.onFeaturesReady(); });
+
+  // ── Make sync feel automatic across devices ────────────────────────────
+  // Pull-based sync only sees the other device's changes when it pulls. So we
+  // pull whenever the tab regains focus (switch back to this PC → see updates)
+  // and on a gentle background poll while the tab is visible. This is what
+  // makes two PCs on the same account stay in step without a manual button.
+  var POLL_MS = 20000;
+  var pollTimer = null;
+  function startPoll() {
+    if (pollTimer || !entitled()) return;
+    pollTimer = setInterval(function () {
+      if (document.visibilityState === 'visible' && navigator.onLine) Sync.pullAll();
+    }, POLL_MS);
+  }
+  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+  document.addEventListener('visibilitychange', function () {
+    if (!entitled()) return;
+    if (document.visibilityState === 'visible') { Sync.pullAll(); startPoll(); }
+    else stopPoll();
+  });
+  window.addEventListener('focus', function () { if (entitled() && navigator.onLine) Sync.pullAll(); });
+  // Kick off the poll once features are known (entitled accounts only).
+  setTimeout(function () { if (entitled()) startPoll(); }, 1500);
 })();
 </script>
 

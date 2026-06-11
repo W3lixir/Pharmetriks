@@ -8,7 +8,7 @@
  *
  * Bump SW_VERSION to roll out a new shell to existing installs.
  */
-const SW_VERSION    = 'pharmetriks-v1.0.1';
+const SW_VERSION    = 'pharmetriks-v1.0.2';
 const SHELL_CACHE   = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const FONTS_CACHE   = `${SW_VERSION}-fonts`;
