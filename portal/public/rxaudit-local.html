@@ -2816,6 +2816,11 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
 
     var token = readToken();
 
+    // Abort after 6s so a dead-but-"online" connection falls back to the cached
+    // license fast instead of hanging the entitlement check.
+    var ctrl = new AbortController();
+    var killer = setTimeout(function () { ctrl.abort(); }, 6000);
+
     fetch('/api/verify-license', {
       method: 'POST',
       headers: {
@@ -2824,8 +2829,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         'Authorization': token ? ('Bearer ' + token) : ''
       },
       credentials: 'include',
-      body: JSON.stringify({})
+      body: JSON.stringify({}),
+      signal: ctrl.signal
     })
+      .then(function (r) { clearTimeout(killer); return r; })
       .then(function (res) {
         if (res.status === 401 || res.status === 403) {
           clearLicense();
@@ -2928,6 +2935,14 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   function tombSig(t) {
     return Object.keys(t || {}).map(function (id) { return id + ':' + t[id]; }).sort().join('|');
   }
+  // fetch with an abort timeout so a weak/dead connection fails fast instead of
+  // leaving the sync badge stuck on "Syncing…".
+  function fetchT(url, opts, ms) {
+    var ctrl = new AbortController();
+    var t = setTimeout(function () { ctrl.abort(); }, ms || 10000);
+    opts = opts || {}; opts.signal = ctrl.signal;
+    return fetch(url, opts).finally(function () { clearTimeout(t); });
+  }
 
   function mergeItems(localArr, remoteArr, tombs) {
     var byId = {};
@@ -3007,7 +3022,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     pullAll: function () {
       if (!entitled() || !navigator.onLine) return;
       var self = this; setBadge('syncing');
-      fetch('/api/sync', { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' } })
+      fetchT('/api/sync', { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' } }, 8000)
         .then(function (r) { if (!r.ok) throw new Error('pull ' + r.status); return r.json(); })
         .then(function (data) {
           var all = loadTombs();
@@ -3043,10 +3058,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
       if (!entitled() || !navigator.onLine) { setBadge('offline'); return; }
       var self = this, tombs = loadTombs()[key] || {};
       setBadge('syncing');
-      fetch('/api/sync', {
+      fetchT('/api/sync', {
         method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ collection: key, items: localItems(key), tombstones: tombs, baseVersion: versions[key] || 0 })
-      }).then(function (r) {
+      }, 10000).then(function (r) {
         if (r.status === 409) { return r.json().then(function (c) { self.resolveConflict(key, c.current || {}, isRetry); }); }
         if (!r.ok) throw new Error('push ' + r.status);
         return r.json().then(function (res) { versions[key] = res.version || ((versions[key] || 0) + 1); setBadge('synced'); });
