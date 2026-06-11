@@ -24,11 +24,11 @@ export const FEATURES: FeatureDef[] = [
   { key: 'utang_tracker',   label: 'Utang & Suki Tracker',         description: 'Digital listahan ng utang — sino, magkano, kailan nagbayad. May suki profiles para kabisado mo ang bawat customer.' },
   { key: 'smart_alerts',    label: 'Smart Alerts & Reorder List',  description: 'Hindi ka na mabibigla: expiry warnings, low-stock alerts, at auto reorder list para alam mo agad ang dapat orderin.' },
   { key: 'charts_insights', label: 'Charts & Insights',            description: 'Sales trends, best sellers, at profit charts — may printable reports para kita mo ang totoong lakad ng botika.' },
-  { key: 'staff_pins',      label: 'Staff PINs & Accountability',  description: 'PIN per staff at log kung sino nag-dispense ng ano. May tiwala ka sa staff — may proof ka pa.' },
+  { key: 'price_list',      label: 'Price List / Catalog',         description: 'Gumawa ng printable o shareable na listahan ng presyo — hindi na paulit-ulit sasagutin ang "magkano po ito?". Reference din ng tindera.' },
   { key: 'suppliers_po',    label: 'Supplier & Purchase Orders',   description: 'Supplier list, paggawa ng PO, at pag-receive ng stock — lahat naka-record, walang nakakalimutan.' },
   { key: 'stock_audit',     label: 'Stock Audit Mode',             description: 'Guided physical count kapag mag-iinventory. Makikita agad ang system-vs-actual na variance.' },
   { key: 'pricing_advisor', label: 'Margin & Pricing Advisor',     description: 'Per-product margin view at markup calculator. Fina-flag ang mga produktong sobrang nipis ang kita.' },
-  { key: 'loss_tracker',    label: 'Loss & Expiry Tracker',        description: 'I-log ang expired, damaged, o pull-out items. Monthly peso-loss report para mabawasan ang lugi next month.' },
+  { key: 'reports_pack',    label: 'Reports & Sulit Pack',         description: 'Daily Sulit (end-of-day summary), Monthly P&L (kita = benta − COGS − OPEX), at one-tap print/share ng buwanang report.' },
 ];
 
 /** Keys in `map` that are explicitly true. */
