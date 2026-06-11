@@ -977,6 +977,10 @@
     <div class="nav-item" data-tab="reports" id="navReports" onclick="switchTab('reports')" style="display:none;">
       <svg class="ic"><use href="#i-receipt"/></svg> Reports
     </div>
+    <!-- Suppliers tab (add-on: 'suppliers_po'). Hidden unless entitled. -->
+    <div class="nav-item" data-tab="suppliers" id="navSuppliers" onclick="switchTab('suppliers')" style="display:none;">
+      <svg class="ic"><use href="#i-compass"/></svg> Suppliers
+    </div>
   </nav>
 
   <button class="guide-btn" onclick="startTour()" aria-label="Open guided tour">
@@ -1256,6 +1260,21 @@
     .audit-diff { flex:0 0 auto; font-size:12px; font-weight:800; min-width:34px; text-align:right; }
     .audit-diff.neg { color:#dc2626; }
     .audit-diff.pos { color:#16a34a; }
+
+    /* ── Suppliers & PO ── */
+    .po-status { flex:0 0 auto; font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; }
+    .po-status.ordered { background:#fef3c7; color:#b45309; }
+    .po-status.received { background:#dcfce7; color:#16a34a; }
+    .po-additem { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+    .po-additem select, .po-additem input { width:auto; }
+    .po-additem #poItemProduct { flex:2; min-width:140px; }
+    .po-additem #poItemQty, .po-additem #poItemCost { flex:1; min-width:70px; }
+    .po-draft { max-height:32vh; overflow:auto; }
+    .po-item { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f1edfb; }
+    .po-item-name { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:#1e0a47; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .po-item-qty { flex:0 0 auto; font-size:12px; color:#64748b; font-variant-numeric:tabular-nums; }
+    .po-empty { color:#94a3b8; font-size:12.5px; padding:10px 0; }
+    .po-total { text-align:right; font-weight:800; color:#1e0a47; font-size:13px; margin-top:8px; }
   </style>
 
   <!-- ════ INVENTORY ════ -->
@@ -1468,6 +1487,27 @@
       </div>
       <div id="repPL"></div>
     </div>
+  </div>
+
+  <!-- ════ SUPPLIERS & PO (add-on: 'suppliers_po') ════ -->
+  <div id="panel-suppliers" class="panel">
+    <div class="section-header">
+      <h2>Supplier &amp; Purchase Orders</h2>
+      <p>Supplier list, paggawa ng PO, at pag-receive ng stock — lahat naka-record.</p>
+    </div>
+
+    <div class="stats-row" id="poKpis"></div>
+
+    <div class="insights-bar">
+      <button class="btn btn-primary btn-sm" onclick="openSupplierModal()"><svg class="ic ic-sm"><use href="#i-plus"/></svg> Add Supplier</button>
+      <button class="btn btn-secondary btn-sm" onclick="openPoModal()"><svg class="ic ic-sm"><use href="#i-plus"/></svg> New PO</button>
+    </div>
+
+    <div class="utang-ledger-label">Purchase Orders</div>
+    <div id="poList"></div>
+
+    <div class="utang-ledger-label" style="margin-top:18px;">Suppliers</div>
+    <div id="supplierList"></div>
   </div>
 
   <!-- Mobile-only upgrade CTA -->
@@ -1761,11 +1801,69 @@
   </div>
 </div>
 
+<!-- ══════════════════════ ADD/EDIT SUPPLIER MODAL ══════════════════════ -->
+<div class="modal-overlay" id="supplierModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2 id="supplierModalTitle">Add Supplier</h2>
+    <input type="hidden" id="supplierEditId">
+    <div class="form-group"><label>Pangalan *</label><input type="text" id="supplierName" placeholder="e.g. Mercury Drug Distributor"></div>
+    <div class="form-group"><label>Contact (optional)</label><input type="text" id="supplierContact" placeholder="numero / sales rep"></div>
+    <div class="form-group"><label>Note (optional)</label><input type="text" id="supplierNote" placeholder="e.g. COD, delivery tuwing Lunes"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="supplierDeleteBtn" style="color:#dc2626;display:none;" onclick="deleteSupplier(document.getElementById('supplierEditId').value)">Delete</button>
+      <button class="btn btn-ghost" onclick="closeUtangModal('supplierModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ NEW PURCHASE ORDER MODAL ══════════════════════ -->
+<div class="modal-overlay" id="poModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:580px;">
+    <h2 style="margin:0 0 10px;">New Purchase Order</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Supplier</label><select id="poSupplier" style="width:100%;"></select></div>
+      <div class="form-group"><label>Petsa</label><input type="date" id="poDate" style="width:100%;"></div>
+    </div>
+    <div class="utang-ledger-label">Mga item</div>
+    <div class="po-additem">
+      <select id="poItemProduct"></select>
+      <input type="number" id="poItemQty" placeholder="Qty" min="1">
+      <input type="number" id="poItemCost" placeholder="Cost" min="0" step="0.01">
+      <button class="btn btn-secondary btn-sm" onclick="addPoItem()">Add</button>
+    </div>
+    <div id="poDraftItems" class="po-draft"></div>
+    <div class="form-group" style="margin-top:10px;"><label>Note (optional)</label><input type="text" id="poNote" placeholder="e.g. COD, 7 days terms"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('poModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePo()">Save PO</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ PO DETAIL MODAL ══════════════════════ -->
+<div class="modal-overlay" id="poDetailModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <input type="hidden" id="poDetailId">
+    <div class="suki-detail-head">
+      <div><h2 id="poDetailTitle" style="margin:0;">PO</h2><div id="poDetailMeta" class="suki-detail-meta"></div></div>
+      <div id="poDetailStatus"></div>
+    </div>
+    <div id="poDetailItems" class="po-draft"></div>
+    <div id="poDetailTotal" class="po-total"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" style="color:#dc2626;" onclick="deletePo(document.getElementById('poDetailId').value)">Delete</button>
+      <button class="btn btn-ghost" onclick="closeUtangModal('poDetailModal')">Close</button>
+      <button class="btn btn-primary" id="poReceiveBtn" onclick="receivePo(document.getElementById('poDetailId').value)">Mark Received (add to stock)</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ══════════════════ STORAGE ══════════════════
-const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses', suki: 'rxmvp_suki', utang: 'rxmvp_utang' };
+const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses', suki: 'rxmvp_suki', utang: 'rxmvp_utang', suppliers: 'rxmvp_suppliers', po: 'rxmvp_po' };
 
 function dbLoad(key) {
   try { return JSON.parse(localStorage.getItem(KEYS[key]) || '[]'); } catch { return []; }
@@ -1827,7 +1925,7 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ══════════════════ SIDEBAR NAV ══════════════════
-const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports'];
+const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports', 'suppliers'];
 
 function switchTab(name) {
   document.querySelectorAll('.nav-item[data-tab]').forEach(t => {
@@ -1847,6 +1945,7 @@ function switchTab(name) {
   if (name === 'insights')   { renderInsights(); }
   if (name === 'utang')      { renderUtang(); }
   if (name === 'reports')    { renderReports(); }
+  if (name === 'suppliers')  { renderSuppliers(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -2768,6 +2867,220 @@ function printAudit() {
   openPrintWindow('Pharmetriks — Stock Audit Variance', `<h1>Stock Audit Variance</h1><div class="sub">${esc(today())}</div>${rows || '<div>Walang diperensya — tugma lahat.</div>'}`);
 }
 
+// ══════════════════ SUPPLIER & PURCHASE ORDERS (add-on: 'suppliers_po') ══════════════════
+function suppliersEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('suppliers_po')); }
+
+let suppliersData = dbLoad('suppliers');
+let poData = dbLoad('po');
+let poDraft = []; // transient line items while building a new PO
+
+function applySuppliersVisibility() {
+  const on = suppliersEnabled();
+  const nav = document.getElementById('navSuppliers');
+  const mob = document.getElementById('mobtab-suppliers');
+  if (nav) nav.style.display = on ? '' : 'none';
+  if (mob) mob.style.display = on ? '' : 'none';
+  const panel = document.getElementById('panel-suppliers');
+  if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
+}
+window.applySuppliersVisibility = applySuppliersVisibility;
+
+function supplierLabel(id) { const s = suppliersData.find(x => x.id === id); return s ? s.name : '(walang supplier)'; }
+function poTotal(po) { return (po.items || []).reduce((s, it) => s + (Number(it.cost) || 0) * (Number(it.qty) || 0), 0); }
+function prodLabel(p) { return (p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + p.dosage : ''); }
+
+function renderSuppliers() {
+  if (!suppliersEnabled()) return;
+  const open = poData.filter(p => p.status !== 'received');
+  const kpi = document.getElementById('poKpis');
+  if (kpi) kpi.innerHTML =
+    `<div class="stat-card"><div class="slabel">Suppliers</div><div class="sval">${suppliersData.length}</div></div>
+     <div class="stat-card"><div class="slabel">Open POs</div><div class="sval ${open.length > 0 ? 'yellow' : ''}">${open.length}</div></div>
+     <div class="stat-card"><div class="slabel">Halaga ng Open PO</div><div class="sval">${peso(open.reduce((s, p) => s + poTotal(p), 0))}</div></div>`;
+  renderPoList();
+  renderSupplierList();
+}
+
+function renderPoList() {
+  const host = document.getElementById('poList');
+  if (!host) return;
+  const list = poData.slice().sort((a, b) => (b.date + (b.created_at || '')).localeCompare(a.date + (a.created_at || '')));
+  if (!list.length) { host.innerHTML = '<div class="ins-empty">Wala pang PO. I-click ang New PO.</div>'; return; }
+  host.innerHTML = list.map(po =>
+    `<div class="suki-row" onclick="openPoDetail('${po.id}')">
+       <div class="suki-row-main">
+         <div class="suki-row-name">${esc(supplierLabel(po.supplier_id))}</div>
+         <div class="suki-row-sub">${esc(po.date || '')} · ${(po.items || []).length} item · ${peso(poTotal(po))}</div>
+       </div>
+       <span class="po-status ${po.status === 'received' ? 'received' : 'ordered'}">${po.status === 'received' ? 'Received' : 'Ordered'}</span>
+     </div>`).join('');
+}
+
+function renderSupplierList() {
+  const host = document.getElementById('supplierList');
+  if (!host) return;
+  if (!suppliersData.length) { host.innerHTML = '<div class="ins-empty">Wala pang supplier.</div>'; return; }
+  host.innerHTML = suppliersData.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(s =>
+    `<div class="suki-row" onclick="openSupplierModal('${s.id}')">
+       <div class="suki-row-main">
+         <div class="suki-row-name">${esc(s.name || 'Supplier')}</div>
+         <div class="suki-row-sub">${[s.contact, s.note].filter(Boolean).map(esc).join(' · ') || 'walang detalye'}</div>
+       </div>
+     </div>`).join('');
+}
+
+function openSupplierModal(id) {
+  if (!suppliersEnabled()) return;
+  document.getElementById('supplierEditId').value = id || '';
+  const s = id ? suppliersData.find(x => x.id === id) : null;
+  document.getElementById('supplierModalTitle').textContent = s ? 'Edit Supplier' : 'Add Supplier';
+  document.getElementById('supplierName').value = s ? (s.name || '') : '';
+  document.getElementById('supplierContact').value = s ? (s.contact || '') : '';
+  document.getElementById('supplierNote').value = s ? (s.note || '') : '';
+  document.getElementById('supplierDeleteBtn').style.display = s ? '' : 'none';
+  document.getElementById('supplierModal').classList.add('open');
+  setTimeout(() => document.getElementById('supplierName').focus(), 80);
+}
+
+function saveSupplier() {
+  const id = document.getElementById('supplierEditId').value;
+  const name = document.getElementById('supplierName').value.trim();
+  if (!name) { toast('Pangalan ay kailangan.', 'error'); return; }
+  const contact = document.getElementById('supplierContact').value.trim();
+  const note = document.getElementById('supplierNote').value.trim();
+  const nowISO = new Date().toISOString();
+  if (id) {
+    const s = suppliersData.find(x => x.id === id);
+    if (s) { s.name = name; s.contact = contact; s.note = note; s.updated_at = nowISO; }
+  } else {
+    suppliersData.push({ id: uid(), name, contact, note, created_at: nowISO, updated_at: nowISO });
+  }
+  dbSave('suppliers', suppliersData);
+  closeUtangModal('supplierModal');
+  renderSuppliers();
+  toast(id ? 'Na-update ang supplier.' : 'Naidagdag ang supplier.');
+}
+
+function deleteSupplier(id) {
+  const s = suppliersData.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`Burahin si "${s.name}"? Mananatili ang mga PO niya pero mawawala ang pangalan.`)) return;
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('suppliers', id);
+  suppliersData = suppliersData.filter(x => x.id !== id);
+  dbSave('suppliers', suppliersData);
+  closeUtangModal('supplierModal');
+  renderSuppliers();
+  toast('Nabura ang supplier.');
+}
+
+function openPoModal() {
+  if (!suppliersEnabled()) return;
+  if (!suppliersData.length) { toast('Magdagdag muna ng supplier.', 'error'); return; }
+  if (!(invData || []).length) { toast('Magdagdag muna ng produkto sa Inventory.', 'error'); return; }
+  poDraft = [];
+  document.getElementById('poSupplier').innerHTML = suppliersData.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  document.getElementById('poItemProduct').innerHTML = (invData || []).map(p => `<option value="${p.id}">${esc(prodLabel(p))}</option>`).join('');
+  document.getElementById('poDate').value = today();
+  document.getElementById('poItemQty').value = '';
+  document.getElementById('poItemCost').value = '';
+  document.getElementById('poNote').value = '';
+  renderPoDraft();
+  document.getElementById('poModal').classList.add('open');
+}
+
+function addPoItem() {
+  const pid = document.getElementById('poItemProduct').value;
+  const prod = (invData || []).find(p => p.id === pid);
+  const qty = parseInt(document.getElementById('poItemQty').value);
+  let cost = parseFloat(document.getElementById('poItemCost').value);
+  if (!prod) { toast('Pumili ng produkto.', 'error'); return; }
+  if (!(qty > 0)) { toast('Maglagay ng qty.', 'error'); return; }
+  if (!(cost >= 0) || isNaN(cost)) cost = Number(prod.cost) || 0;
+  poDraft.push({ product_id: pid, name: prodLabel(prod), qty, cost });
+  document.getElementById('poItemQty').value = '';
+  document.getElementById('poItemCost').value = '';
+  renderPoDraft();
+}
+
+function removePoItem(idx) { poDraft.splice(idx, 1); renderPoDraft(); }
+
+function renderPoDraft() {
+  const host = document.getElementById('poDraftItems');
+  if (!host) return;
+  if (!poDraft.length) { host.innerHTML = '<div class="po-empty">Wala pang item.</div>'; return; }
+  host.innerHTML = poDraft.map((it, i) =>
+    `<div class="po-item">
+       <span class="po-item-name">${esc(it.name)}</span>
+       <span class="po-item-qty">${it.qty} × ${peso(it.cost)}</span>
+       <button class="ledger-del" onclick="removePoItem(${i})">×</button>
+     </div>`).join('') +
+    `<div class="po-total">Total: ${peso(poDraft.reduce((s, it) => s + it.cost * it.qty, 0))}</div>`;
+}
+
+function savePo() {
+  if (!poDraft.length) { toast('Magdagdag ng kahit isang item.', 'error'); return; }
+  const supplier_id = document.getElementById('poSupplier').value;
+  const date = document.getElementById('poDate').value || today();
+  const note = document.getElementById('poNote').value.trim();
+  const nowISO = new Date().toISOString();
+  poData.unshift({ id: uid(), supplier_id, date, status: 'ordered', items: poDraft.map(it => Object.assign({}, it)), note, created_at: nowISO, updated_at: nowISO });
+  dbSave('po', poData);
+  closeUtangModal('poModal');
+  renderSuppliers();
+  toast('Naitala ang PO.');
+}
+
+function openPoDetail(id) {
+  const po = poData.find(x => x.id === id);
+  if (!po) return;
+  document.getElementById('poDetailId').value = id;
+  document.getElementById('poDetailTitle').textContent = supplierLabel(po.supplier_id);
+  document.getElementById('poDetailMeta').textContent = `${po.date || ''}${po.note ? ' · ' + po.note : ''}`;
+  document.getElementById('poDetailStatus').innerHTML = `<span class="po-status ${po.status === 'received' ? 'received' : 'ordered'}">${po.status === 'received' ? 'Received' : 'Ordered'}</span>`;
+  document.getElementById('poDetailItems').innerHTML = (po.items || []).map(it =>
+    `<div class="po-item"><span class="po-item-name">${esc(it.name)}</span><span class="po-item-qty">${it.qty} × ${peso(it.cost)}</span></div>`).join('');
+  document.getElementById('poDetailTotal').textContent = 'Total: ' + peso(poTotal(po));
+  document.getElementById('poReceiveBtn').style.display = po.status === 'received' ? 'none' : '';
+  document.getElementById('poDetailModal').classList.add('open');
+}
+
+function receivePo(id) {
+  const po = poData.find(x => x.id === id);
+  if (!po || po.status === 'received') return;
+  if (!confirm('Idagdag sa stock ang mga item ng PO na ito?')) return;
+  (po.items || []).forEach(it => {
+    const prod = (invData || []).find(p => p.id === it.product_id);
+    if (prod) {
+      prod.qty = (Number(prod.qty) || 0) + (Number(it.qty) || 0);
+      if (Number(it.cost) > 0) prod.cost = Number(it.cost); // refresh to latest buying cost
+      prod.updated_at = new Date().toISOString();
+    }
+  });
+  po.status = 'received';
+  po.received_at = new Date().toISOString();
+  po.updated_at = po.received_at;
+  dbSave('inv', invData);
+  dbSave('po', poData);
+  renderInventory();
+  renderProductList();
+  renderSuppliers();
+  openPoDetail(id);
+  toast('Na-receive — naidagdag sa stock.');
+}
+
+function deletePo(id) {
+  const po = poData.find(x => x.id === id);
+  if (!po) return;
+  if (!confirm('Burahin ang PO na ito?')) return;
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('po', id);
+  poData = poData.filter(x => x.id !== id);
+  dbSave('po', poData);
+  closeUtangModal('poDetailModal');
+  renderSuppliers();
+  toast('Nabura ang PO.');
+}
+window.renderSuppliers = renderSuppliers;
+
 function openInvModal(id) {
   if (id) {
     const p = invData.find(x => x.id === id);
@@ -3467,6 +3780,12 @@ window.PHARMETRIKS_APPLY = function (key, arr) {
   } else if (key === 'utang') {
     utangData = arr;
     if (typeof renderUtang === 'function') renderUtang();
+  } else if (key === 'suppliers') {
+    suppliersData = arr;
+    if (typeof renderSuppliers === 'function') renderSuppliers();
+  } else if (key === 'po') {
+    poData = arr;
+    if (typeof renderSuppliers === 'function') renderSuppliers();
   }
 };
 
@@ -3598,6 +3917,7 @@ applyReportsVisibility();    // reveal the Reports tab if cached features includ
 applyPriceListVisibility();  // reveal the Price List button if cached features include it
 applyPricingVisibility();    // reveal the Pricing button if cached features include it
 applyAuditVisibility();      // reveal the Stock Audit button if cached features include it
+applySuppliersVisibility();  // reveal the Suppliers tab if cached features include it
 
 // ══════════════════ GUIDED TOUR (spotlight) ══════════════════
 const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
@@ -4108,6 +4428,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.applyPriceListVisibility) window.applyPriceListVisibility();
         if (window.applyPricingVisibility) window.applyPricingVisibility();
         if (window.applyAuditVisibility) window.applyAuditVisibility();
+        if (window.applySuppliersVisibility) window.applySuppliersVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -4159,6 +4480,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     if (window.applyPriceListVisibility) window.applyPriceListVisibility();
     if (window.applyPricingVisibility) window.applyPricingVisibility();
     if (window.applyAuditVisibility) window.applyAuditVisibility();
+    if (window.applySuppliersVisibility) window.applySuppliersVisibility();
     if (window.renderSmartAlerts) window.renderSmartAlerts();
   } catch (e) {}
 
@@ -4179,9 +4501,9 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
  * with tombstones so deletes propagate; per-collection version for optimistic
  * concurrency. Reuses window.dbLoad/dbSave and window.PHARMETRIKS_APPLY. */
 (function () {
-  var COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang'];
+  var COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang', 'suppliers', 'po'];
   var TOMB_KEY = 'rxmvp_tombstones';
-  var versions = { inv: 0, sales: 0, exp: 0, suki: 0, utang: 0 };
+  var versions = { inv: 0, sales: 0, exp: 0, suki: 0, utang: 0, suppliers: 0, po: 0 };
   var timers = {};
   var didInitialPull = false;
 
@@ -4401,6 +4723,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   <div class="mob-tab" id="mobtab-reports" onclick="switchTab('reports')" style="display:none;">
     <svg class="ic mob-tab-icon"><use href="#i-receipt"/></svg>
     <span>Reports</span>
+  </div>
+  <div class="mob-tab" id="mobtab-suppliers" onclick="switchTab('suppliers')" style="display:none;">
+    <svg class="ic mob-tab-icon"><use href="#i-compass"/></svg>
+    <span>Suppliers</span>
   </div>
 </nav>
 
