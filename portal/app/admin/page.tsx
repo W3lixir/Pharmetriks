@@ -6,7 +6,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import UserRow from './UserRow';
 import type { ProfileStatus } from '@/lib/auth';
 
-export const metadata = { title: 'Admin · RXaudit' };
+export const metadata = { title: 'Admin · Pharmetriks' };
 export const dynamic = 'force-dynamic';
 
 type Search = { filter?: string; q?: string };
@@ -31,6 +31,8 @@ type Profile = {
   approved_at: string | null;
   notes: string | null;
   created_at: string;
+  features: Record<string, boolean> | null;
+  requested_features: Record<string, boolean> | null;
 };
 
 export default async function AdminDashboard({ searchParams }: { searchParams: Search }) {
@@ -44,7 +46,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
   const svc = adminService();
   let qb = svc
     .from('profiles')
-    .select('id, email, full_name, pharmacy_name, status, receipt_url, payment_reference, approved_at, notes, created_at')
+    .select('id, email, full_name, pharmacy_name, status, receipt_url, payment_reference, approved_at, notes, created_at, features, requested_features')
     .order('created_at', { ascending: false })
     .limit(200);
 

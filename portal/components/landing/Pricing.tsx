@@ -2,10 +2,12 @@ import Link from 'next/link';
 import Icon from '@/components/ui/Icon';
 import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
+import { FEATURES } from '@/lib/features';
+import { APP_PRICE_PHP, ADDON_PRICE_PHP, peso } from '@/lib/pricing';
 
 const INCLUDED = [
   'Dispensing module (sales + auto stock deduct)',
-  'Inventory management (batches, expiry, low-stock alerts)',
+  'Inventory management (batches, expiry, low-stock)',
   'OPEX tracking (expenses, P&L, summary)',
   'Works offline forever after install',
   'Mobile + desktop (PWA install)',
@@ -40,7 +42,7 @@ export default function Pricing() {
 
             <div className="flex items-end gap-1 mt-2">
               <span className="text-[56px] sm:text-[72px] font-black tracking-[-2.5px] leading-none text-accent">
-                ₱249
+                {peso(APP_PRICE_PHP)}
               </span>
               <span className="mb-2 text-[13px] font-bold text-ink-2/60">one-time</span>
             </div>
@@ -63,7 +65,7 @@ export default function Pricing() {
               href="/signup"
               className="btn-primary mt-8 w-full text-[15px] px-5 py-3.5 justify-center"
             >
-              Mag-sign up — ₱249
+              Mag-sign up — {peso(APP_PRICE_PHP)}
               <Icon name="arrow-right" size={16} />
             </Link>
 
@@ -72,6 +74,43 @@ export default function Pricing() {
             </div>
           </GlassCard>
         </div>
+
+        {/* ── Optional add-ons ──────────────────────────────────────────── */}
+        <div className="mt-14 text-center">
+          <Pill tone="pink">
+            <Icon name="sparkle" size={11} /> Add-ons
+          </Pill>
+          <h3 className="mt-4 text-[22px] sm:text-3xl font-extrabold tracking-tight">
+            Mga optional add-ons — {peso(ADDON_PRICE_PHP)} each, isang beses lang din.
+          </h3>
+          <p className="mt-3 text-[14px] text-ink-2/80 font-medium leading-relaxed max-w-xl mx-auto">
+            Piliin mo lang ang kailangan mo pag-checkout — makikita mo agad ang
+            total bago ka magbayad. Pwede ka ring mag-add later. Hindi mandatory,
+            hindi subscription.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
+          {FEATURES.map(f => (
+            <GlassCard key={f.key} className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <h4 className="text-[14.5px] font-extrabold tracking-tight">{f.label}</h4>
+                <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 font-mono text-[11.5px] font-bold text-accent">
+                  {peso(ADDON_PRICE_PHP)}
+                </span>
+              </div>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-2/75 font-medium">
+                {f.description}
+              </p>
+            </GlassCard>
+          ))}
+        </div>
+
+        <p className="mt-6 text-center text-[12px] font-semibold text-ink-2/65">
+          Example: base app + 3 add-ons = {peso(APP_PRICE_PHP)} +{' '}
+          3 × {peso(ADDON_PRICE_PHP)} ={' '}
+          <strong className="text-ink-2">{peso(APP_PRICE_PHP + 3 * ADDON_PRICE_PHP)}</strong>, one-time.
+        </p>
       </div>
     </section>
   );

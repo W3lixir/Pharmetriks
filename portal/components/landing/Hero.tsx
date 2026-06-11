@@ -20,13 +20,14 @@ export default function Hero() {
             </Pill>
 
             <h1 className="mt-5 text-[34px] leading-[1.05] font-extrabold tracking-[-1px] sm:text-5xl lg:text-[56px]">
-              Pharmacy audit na{' '}
-              <span className="bg-clip-text text-transparent bg-lyna-cta">pwede kahit walang internet</span>.
+              Goodbye kwaderno.{' '}
+              <span className="bg-clip-text text-transparent bg-lyna-cta">Hello peace of mind</span>.
             </h1>
 
             <p className="mt-5 mx-auto lg:mx-0 max-w-xl text-[15px] sm:text-base leading-relaxed text-ink-2/85 font-medium">
-              Track dispensing, inventory, at OPEX sa phone mo — kahit offline. Walang
-              monthly fee, walang subscription. <strong className="text-ink-2 font-extrabold">₱249 one-time, lifetime access.</strong>
+              Benta, stock, at gastos — kita mo lahat sa phone mo, kahit walang
+              internet. Less pagod sa pagbibilang, less kaba sa pera.{' '}
+              <strong className="text-ink-2 font-extrabold">₱249 one-time, lifetime access.</strong>
             </p>
 
             <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>RXaudit</title>
+  <title>Pharmetriks</title>
   <meta name="description" content="Offline-first pharmacy audit tool — dispensing, inventory, and OPEX tracking.">
 
   <!-- PWA manifest + theme -->
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RXaudit">
+  <meta name="apple-mobile-web-app-title" content="Pharmetriks">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg">
   <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
   <link rel="mask-icon" href="/icons/icon-monochrome.svg" color="#0033FF">
@@ -929,15 +929,15 @@
 
 <!-- ══════════════════════ MOBILE HEADER ══════════════════════ -->
 <header class="mobile-header">
-  <img src="/icons/icon.svg" alt="RXaudit" class="mob-logo">
+  <img src="/icons/icon.svg" alt="Pharmetriks" class="mob-logo">
   <div class="mob-header-text">
-    <span class="mob-title">RXaudit Starter</span>
+    <span class="mob-title">Pharmetriks Basic</span>
     <span class="mob-sub">Offline Pharmacy App</span>
   </div>
   <button type="button" class="mob-guide-btn" onclick="startTour()" aria-label="Open guided tour" title="How to use">
     <svg class="ic ic-sm" style="stroke:white;"><use href="#i-help"/></svg>
   </button>
-  <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&utm_medium=mobile_header" target="_blank" rel="noopener" class="mob-upgrade-btn">
+  <a href="https://pharmetriks.vercel.app/landing?utm_source=basic_app&utm_medium=mobile_header" target="_blank" rel="noopener" class="mob-upgrade-btn">
     Upgrade
     <svg class="ic ic-sm" style="margin-left:2px;vertical-align:-3px;stroke:white;"><use href="#i-arrow-right"/></svg>
   </a>
@@ -948,8 +948,8 @@
   <div class="sidebar-brand">
     <img
       src="/icons/icon.svg"
-      alt="RXaudit">
-    <div class="app-name">RXaudit Starter App</div>
+      alt="Pharmetriks">
+    <div class="app-name">Pharmetriks Basic</div>
     <div class="app-sub">Offline Pharmacy MVP</div>
   </div>
 
@@ -974,8 +974,8 @@
   <div class="upgrade-cta">
     <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
     <div class="uc-sub">Multi-device sync, cloud backup, team access &amp; more.</div>
-    <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&amp;utm_medium=sidebar_cta" target="_blank" rel="noopener" class="uc-btn" onclick="trackUpgradeClick()">
-      Upgrade to RXaudit
+    <a href="https://pharmetriks.vercel.app/landing?utm_source=basic_app&amp;utm_medium=sidebar_cta" target="_blank" rel="noopener" class="uc-btn" onclick="trackUpgradeClick()">
+      Upgrade to Pharmetriks
       <svg class="ic ic-sm" style="margin-left:4px;vertical-align:-3px;"><use href="#i-arrow-right"/></svg>
     </a>
   </div>
@@ -1023,6 +1023,29 @@
 
         <div id="cartFooter" style="display:none;">
           <hr class="cart-divider">
+          <div id="discountSection" style="display:none;">
+            <label class="cust-label">Discount</label>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+              <select id="discountType" onchange="onDiscountChange()" style="flex:1;min-width:0;">
+                <option value="">None</option>
+                <option value="senior">Senior</option>
+                <option value="pwd">PWD</option>
+                <option value="wholesale">Wholesale</option>
+                <option value="custom">Custom</option>
+              </select>
+              <select id="discountMode" onchange="onDiscountChange()" style="width:62px;">
+                <option value="percent">%</option>
+                <option value="amount">₱</option>
+              </select>
+              <input type="number" id="discountValue" min="0" step="0.01" placeholder="0" oninput="onDiscountChange()" style="width:86px;">
+            </div>
+            <div class="cart-total-row" id="subtotalRow" style="display:none;font-weight:600;font-size:14px;color:#64748b;">
+              <span>Subtotal</span><span id="cartSubtotalAmt">₱0.00</span>
+            </div>
+            <div class="cart-total-row" id="discountRow" style="display:none;font-weight:600;font-size:14px;color:#059669;">
+              <span id="discountLabel">Discount</span><span id="cartDiscountAmt">−₱0.00</span>
+            </div>
+          </div>
           <div class="cart-total-row">
             <span>Total</span>
             <span id="cartTotalAmt">₱0.00</span>
@@ -1195,8 +1218,8 @@
   <div class="upgrade-cta mobile-only-cta" style="margin-top:24px;">
     <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
     <div class="uc-sub">Multi-device sync, cloud backup, team access &amp; more.</div>
-    <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&utm_medium=content_cta" target="_blank" rel="noopener" class="uc-btn">
-      Upgrade to RXaudit
+    <a href="https://pharmetriks.vercel.app/landing?utm_source=basic_app&utm_medium=content_cta" target="_blank" rel="noopener" class="uc-btn">
+      Upgrade to Pharmetriks
       <svg class="ic ic-sm" style="margin-left:4px;vertical-align:-3px;"><use href="#i-arrow-right"/></svg>
     </a>
   </div>
@@ -1353,6 +1376,9 @@ function dbLoad(key) {
 }
 function dbSave(key, data) {
   localStorage.setItem(KEYS[key], JSON.stringify(data));
+  // Cloud sync (Offline + Online Sync add-on) — no-op unless the manager is
+  // loaded and the account is entitled. Guarded against re-entry on remote apply.
+  if (window.PHARMETRIKS_SYNC && window.PHARMETRIKS_SYNC.onLocalSave) window.PHARMETRIKS_SYNC.onLocalSave(key);
 }
 
 // ══════════════════ UTILS ══════════════════
@@ -1590,6 +1616,7 @@ function saveProduct() {
 function deleteProduct(id) {
   if (!confirm('Delete this product? This cannot be undone.')) return;
   invData = invData.filter(x => x.id !== id);
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('inv', id);
   dbSave('inv', invData);
   renderInventory();
   renderProductList();
@@ -1880,6 +1907,56 @@ function clearCart() {
   renderProductList();
 }
 
+// ── Dispense discount (add-on feature: 'discount') ──────────────────────
+function discountEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('discount')); }
+
+// Reads the cart discount inputs and returns the resolved peso discount for a
+// given gross. Returns zero when the feature is off or no value is entered.
+function computeDiscount(gross) {
+  const typeEl = document.getElementById('discountType');
+  if (!discountEnabled() || !typeEl) return { type: '', mode: 'percent', value: 0, amount: 0 };
+  const type  = typeEl.value;
+  const mode  = (document.getElementById('discountMode') || {}).value || 'percent';
+  let value   = parseFloat((document.getElementById('discountValue') || {}).value) || 0;
+  if (value < 0) value = 0;
+  let amount = mode === 'percent' ? gross * (value / 100) : value;
+  if (amount < 0) amount = 0;
+  if (amount > gross) amount = gross;
+  return { type, mode, value, amount };
+}
+
+function discountLabelText(type) {
+  return ({ senior: 'Senior', pwd: 'PWD', wholesale: 'Wholesale', custom: 'Custom' })[type] || 'Discount';
+}
+
+function updateDiscountRows(gross, d) {
+  const sub = document.getElementById('subtotalRow');
+  const row = document.getElementById('discountRow');
+  if (!sub || !row) return;
+  if (d.amount > 0) {
+    document.getElementById('cartSubtotalAmt').textContent = peso(gross);
+    document.getElementById('cartDiscountAmt').textContent = '−' + peso(d.amount);
+    document.getElementById('discountLabel').textContent =
+      discountLabelText(d.type) + (d.mode === 'percent' && d.value ? ` (${d.value}%)` : '');
+    sub.style.display = ''; row.style.display = '';
+  } else {
+    sub.style.display = 'none'; row.style.display = 'none';
+  }
+}
+
+function applyDiscountVisibility() {
+  const sec = document.getElementById('discountSection');
+  if (sec) sec.style.display = discountEnabled() ? '' : 'none';
+}
+window.applyDiscountVisibility = applyDiscountVisibility;
+
+function onDiscountChange() { if (typeof renderCart === 'function') renderCart(); }
+
+function resetDiscountInputs() {
+  const t = document.getElementById('discountType'); if (t) t.value = '';
+  const v = document.getElementById('discountValue'); if (v) v.value = '';
+}
+
 function renderCart() {
   const itemsEl   = document.getElementById('cartItems');
   const footerEl  = document.getElementById('cartFooter');
@@ -1916,8 +1993,11 @@ function renderCart() {
     </div>
   `).join('');
 
-  const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-  document.getElementById('cartTotalAmt').textContent = peso(total);
+  const gross = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const d = computeDiscount(gross);
+  document.getElementById('cartTotalAmt').textContent = peso(gross - d.amount);
+  updateDiscountRows(gross, d);
+  applyDiscountVisibility();
   footerEl.style.display = '';
   emptyFtEl.style.display = 'none';
 }
@@ -1929,7 +2009,9 @@ function dispenseCart() {
   const pad = n => String(n).padStart(2, '0');
   const orderNum = `ORD-${now.getFullYear().toString().slice(-2)}${pad(now.getMonth()+1)}${pad(now.getDate())}-${String(Date.now()).slice(-4)}`;
   const customer = getCustomerName();
-  const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const gross = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const disc = computeDiscount(gross);
+  const total = gross - disc.amount;
 
   for (const item of cart) {
     const p = invData.find(x => x.id === item.product_id);
@@ -1941,7 +2023,10 @@ function dispenseCart() {
   const tx = {
     id: uid(), date: today(), time, order_number: orderNum,
     customer, items: cart.map(c => ({ ...c })),
-    total, created_at: now.toISOString(),
+    total, gross_total: gross,
+    discount_type: disc.type, discount_mode: disc.mode,
+    discount_value: disc.value, discount_amount: disc.amount,
+    created_at: now.toISOString(), updated_at: now.toISOString(),
   };
   salesData.unshift(tx);
   dbSave('sales', salesData);
@@ -1949,6 +2034,7 @@ function dispenseCart() {
   cart = [];
   document.getElementById('customerName').value = '';
   document.getElementById('customerName2').value = '';
+  resetDiscountInputs();
   renderCart();
   renderSales();
   renderProductList();
@@ -1977,6 +2063,7 @@ function renderSales() {
 
 function deleteTransaction(id) {
   if (!confirm('Delete this transaction?\n\nNote: Stock will NOT be restored automatically.')) return;
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('sales', id);
   salesData = salesData.filter(x => x.id !== id);
   dbSave('sales', salesData);
   renderSales();
@@ -2052,6 +2139,7 @@ function renderOpexStats() {
   const sales = filterByPeriod(salesData, opexPeriod);
   const exps  = filterByPeriod(expData, opexPeriod);
   const grossSales  = sales.reduce((s, t) => s + Number(t.total || 0), 0);
+  const totalDiscount = sales.reduce((s, t) => s + Number(t.discount_amount || 0), 0);
   const totalCOGS   = sales.reduce((s, t) => s + t.items.reduce((si, i) => si + (Number(i.cost || 0) * Number(i.qty || 0)), 0), 0);
   const totalExp    = exps.reduce((s, e) => s + Number(e.amount || 0), 0);
   const netProfit   = grossSales - totalCOGS - totalExp;
@@ -2069,6 +2157,11 @@ function renderOpexStats() {
       <div class="slabel">Expenses <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
       <div class="sval red" style="font-size:20px;">${peso(totalExp)}</div>
     </div>
+    ${(discountEnabled() || totalDiscount > 0) ? `
+    <div class="stat-card">
+      <div class="slabel">Discounts Given <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
+      <div class="sval red" style="font-size:20px;">${peso(totalDiscount)}</div>
+    </div>` : ''}
     <div class="stat-card">
       <div class="slabel">Net Profit <span style="font-weight:500;color:#c4b5fd;">· ${esc(label)}</span></div>
       <div class="sval" style="font-size:20px;color:${profitColor};">${peso(netProfit)}</div>
@@ -2094,7 +2187,7 @@ function addExpense() {
   if (!desc)       { toast('Description is required.', 'error'); return; }
   if (amount <= 0) { toast('Amount must be greater than 0.', 'error'); return; }
 
-  expData.push({ id: uid(), date, category: cat, description: desc, amount, created_at: new Date().toISOString() });
+  expData.push({ id: uid(), date, category: cat, description: desc, amount, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   dbSave('exp', expData);
   document.getElementById('expDesc').value = '';
   document.getElementById('expAmount').value = '';
@@ -2106,11 +2199,31 @@ function addExpense() {
 function deleteExpense(id) {
   if (!confirm('Delete this expense?')) return;
   expData = expData.filter(x => x.id !== id);
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('exp', id);
   dbSave('exp', expData);
   renderExpenses();
   renderOpexStats();
   toast('Expense deleted.');
 }
+
+// Sync bridge: the cloud sync manager calls this after a pull/merge to swap a
+// collection's in-memory array and re-render the affected views.
+window.PHARMETRIKS_APPLY = function (key, arr) {
+  if (key === 'inv') {
+    invData = arr;
+    if (typeof renderInventory === 'function') renderInventory();
+    if (typeof renderProductList === 'function') renderProductList();
+  } else if (key === 'sales') {
+    salesData = arr;
+    if (typeof renderSales === 'function') renderSales();
+    if (typeof renderSalesLog === 'function') renderSalesLog();
+    if (typeof renderOpexStats === 'function') renderOpexStats();
+  } else if (key === 'exp') {
+    expData = arr;
+    if (typeof renderExpenses === 'function') renderExpenses();
+    if (typeof renderOpexStats === 'function') renderOpexStats();
+  }
+};
 
 function renderSalesLog() {
   const tb = document.getElementById('salesLogTable');
@@ -2139,7 +2252,7 @@ function renderSalesLog() {
       <td class="font-mono" style="color:#7c3aed;font-weight:600;">${esc(t.order_number)}</td>
       <td>${esc(t.customer || 'Walk-in Customer')}</td>
       <td class="text-right" style="color:#4c1d95;">${t.items.length}</td>
-      <td class="text-right font-mono" style="font-weight:700;color:#059669;">${peso(t.total)}</td>
+      <td class="text-right font-mono" style="font-weight:700;color:#059669;">${peso(t.total)}${Number(t.discount_amount) > 0 ? `<div style="font-weight:500;font-size:11px;color:#9a6b00;">−${peso(t.discount_amount)} ${esc(discountLabelText(t.discount_type))}</div>` : ''}</td>
     </tr>
   `).join('');
 
@@ -2241,7 +2354,7 @@ const TOUR_STEPS = [
   {
     target: null,
     icon: 'i-wave',
-    title: 'Welcome to RXaudit',
+    title: 'Welcome to Pharmetriks',
     body: 'Your offline-first pharmacy companion. Lahat ng data, naka-save sa device mo (localStorage) — walang signup, walang cloud.',
     tip: 'You can reopen this tour anytime via the <strong>How to Use</strong> button in the sidebar.'
   },
@@ -2533,7 +2646,8 @@ function visibleEl(...selectors) {
 
 // Dim panels: clicking outside spotlight area closes the tour
 ['tourDimTop','tourDimBottom','tourDimLeft','tourDimRight'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', () => {
     if (tourActive) closeTour();
   });
 });
@@ -2609,10 +2723,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   // soft-fails and the app continues to work — the goal here is to wire up
   // the contract so later phases drop in cleanly.
 
-  var LIC_KEY      = 'rxaudit_license_v1';
+  var LIC_KEY      = 'pharmetriks_license_v1';
   var GRACE_MS     = 7 * 24 * 60 * 60 * 1000;   // 7 days offline grace
   var REVERIFY_MS  = 24 * 60 * 60 * 1000;       // re-check at most once per day
-  var TOKEN_KEY    = 'rxaudit_jwt';             // future: set by /login flow
+  var TOKEN_KEY    = 'pharmetriks_jwt';             // future: set by /login flow
 
   function loadLicense() {
     try { return JSON.parse(localStorage.getItem(LIC_KEY) || 'null'); }
@@ -2668,7 +2782,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   }
 
   function redirectToLogin(reason) {
-    try { sessionStorage.setItem('rxaudit_login_reason', reason || ''); } catch (e) {}
+    try { sessionStorage.setItem('pharmetriks_login_reason', reason || ''); } catch (e) {}
     // Only redirect when /login is actually reachable (i.e. served by Next.js).
     // In standalone file:// mode, show the block instead so we don't bounce.
     if (location.protocol === 'http:' || location.protocol === 'https:') {
@@ -2723,8 +2837,12 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         saveLicense({
           status: data.status || 'approved',
           expires_at: data.expires_at || null,
+          features: data.features || {},
           verified_at: new Date().toISOString()
         });
+        window.PHARMETRIKS_FEATURES = data.features || {};
+        if (window.PHARMETRIKS_SYNC && window.PHARMETRIKS_SYNC.onFeaturesReady) window.PHARMETRIKS_SYNC.onFeaturesReady();
+        if (window.applyDiscountVisibility) window.applyDiscountVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -2758,12 +2876,171 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   window.addEventListener('online',  verifyLicense);
   window.addEventListener('offline', function () { /* cached license keeps app running */ });
 
+  // Per-account add-on feature entitlements. Hydrate from the cached license
+  // so gating works offline; refreshed by verifyLicense() when online.
+  // Gate a feature's UI with: if (window.PHARMETRIKS_HAS('feature_key')) { … }
+  window.PHARMETRIKS_FEATURES = (loadLicense() || {}).features || {};
+  window.PHARMETRIKS_HAS = function (key) {
+    var f = (loadLicense() || {}).features || window.PHARMETRIKS_FEATURES || {};
+    return f[key] === true;
+  };
+
   // Expose minimal hooks for the future Next.js wrapper to drive auth state.
-  window.RXAUDIT_AUTH = {
+  window.PHARMETRIKS_AUTH = {
     setToken: function (t) { try { localStorage.setItem(TOKEN_KEY, t || ''); } catch (e) {} },
     clear:    function () { clearLicense(); try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} },
     verify:   verifyLicense
   };
+})();
+</script>
+
+<!-- ══════════════════════ CLOUD SYNC (Offline + Online Sync add-on) ══════════════════════ -->
+<script>
+/* Mirrors each localStorage collection (inv/sales/exp) to /api/sync and merges
+ * on pull. Entirely no-op unless window.PHARMETRIKS_HAS('cloud_sync') is true.
+ * Merge = last-write-wins per record id (by updated_at, fallback created_at)
+ * with tombstones so deletes propagate; per-collection version for optimistic
+ * concurrency. Reuses window.dbLoad/dbSave and window.PHARMETRIKS_APPLY. */
+(function () {
+  var COLLECTIONS = ['inv', 'sales', 'exp'];
+  var TOMB_KEY = 'rxmvp_tombstones';
+  var versions = { inv: 0, sales: 0, exp: 0 };
+  var timers = {};
+  var didInitialPull = false;
+
+  function entitled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('cloud_sync')); }
+  function localItems(key) { try { return (window.dbLoad ? window.dbLoad(key) : []) || []; } catch (e) { return []; } }
+  function loadTombs() { try { return JSON.parse(localStorage.getItem(TOMB_KEY) || '{}'); } catch (e) { return {}; } }
+  function saveTombs(t) { try { localStorage.setItem(TOMB_KEY, JSON.stringify(t)); } catch (e) {} }
+  function recTs(r) { return (r && Date.parse(r.updated_at || r.created_at)) || 0; }
+
+  function mergeItems(localArr, remoteArr, tombs) {
+    var byId = {};
+    (Array.isArray(remoteArr) ? remoteArr : []).forEach(function (r) { if (r && r.id) byId[r.id] = r; });
+    (Array.isArray(localArr) ? localArr : []).forEach(function (l) {
+      if (!l || !l.id) return;
+      var ex = byId[l.id];
+      if (!ex || recTs(l) >= recTs(ex)) byId[l.id] = l;
+    });
+    Object.keys(tombs || {}).forEach(function (id) {
+      var dts = Date.parse(tombs[id]) || 0;
+      var rec = byId[id];
+      if (rec && dts >= recTs(rec)) delete byId[id];
+    });
+    return Object.keys(byId).map(function (k) { return byId[k]; });
+  }
+
+  function mergeTombs(a, b) {
+    var out = {};
+    [a || {}, b || {}].forEach(function (m) {
+      Object.keys(m).forEach(function (id) {
+        if ((Date.parse(m[id]) || 0) > (Date.parse(out[id]) || 0)) out[id] = m[id];
+      });
+    });
+    return out;
+  }
+
+  // ── tiny status badge (only ever shown when entitled) ──────────────────
+  function badge() {
+    var el = document.getElementById('rxSyncBadge');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'rxSyncBadge';
+      el.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:9998;display:none;align-items:center;' +
+        "font:700 11px/1 'Plus Jakarta Sans',system-ui,sans-serif;padding:6px 11px;border-radius:999px;" +
+        'background:rgba(255,255,255,0.92);box-shadow:0 4px 14px rgba(0,0,61,0.18);color:#00003D;';
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function setBadge(state) {
+    if (!entitled()) return;
+    var el = badge();
+    var map = { syncing: ['Syncing…', '#0033FF'], synced: ['✓ Synced', '#0a8a3f'], offline: ['• Offline', '#9a6b00'] };
+    var m = map[state] || map.synced;
+    el.textContent = m[0]; el.style.color = m[1]; el.style.display = 'inline-flex';
+    if (state === 'synced') { clearTimeout(el._t); el._t = setTimeout(function () { el.style.display = 'none'; }, 2500); }
+  }
+
+  var Sync = {
+    applyingRemote: false,
+
+    onLocalSave: function (key) { if (entitled() && !this.applyingRemote) this.scheduleSync(key); },
+
+    markDeleted: function (key, id) {
+      var all = loadTombs(); all[key] = all[key] || {}; all[key][id] = new Date().toISOString(); saveTombs(all);
+    },
+
+    onFeaturesReady: function () { if (entitled() && !didInitialPull) { didInitialPull = true; this.pullAll(); } },
+
+    applyMerged: function (key, arr) {
+      this.applyingRemote = true;
+      try {
+        if (window.dbSave) window.dbSave(key, arr);
+        if (window.PHARMETRIKS_APPLY) window.PHARMETRIKS_APPLY(key, arr);
+      } finally { this.applyingRemote = false; }
+    },
+
+    pullAll: function () {
+      if (!entitled() || !navigator.onLine) return;
+      var self = this; setBadge('syncing');
+      fetch('/api/sync', { method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('pull ' + r.status); return r.json(); })
+        .then(function (data) {
+          var all = loadTombs();
+          COLLECTIONS.forEach(function (key) {
+            var rem = data[key] || { items: [], tombstones: {}, version: 0 };
+            versions[key] = rem.version || 0;
+            all[key] = mergeTombs(all[key] || {}, rem.tombstones || {});
+            self.applyMerged(key, mergeItems(localItems(key), rem.items || [], all[key]));
+          });
+          saveTombs(all);
+          setBadge('synced');
+          COLLECTIONS.forEach(function (key) { self.scheduleSync(key, 0); }); // push union back
+        })
+        .catch(function () { setBadge('offline'); });
+    },
+
+    scheduleSync: function (key, delay) {
+      if (!entitled()) return;
+      var self = this;
+      clearTimeout(timers[key]);
+      timers[key] = setTimeout(function () { self.push(key); }, delay == null ? 2500 : delay);
+    },
+
+    push: function (key, isRetry) {
+      if (!entitled() || !navigator.onLine) { setBadge('offline'); return; }
+      var self = this, tombs = loadTombs()[key] || {};
+      setBadge('syncing');
+      fetch('/api/sync', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collection: key, items: localItems(key), tombstones: tombs, baseVersion: versions[key] || 0 })
+      }).then(function (r) {
+        if (r.status === 409) { return r.json().then(function (c) { self.resolveConflict(key, c.current || {}, isRetry); }); }
+        if (!r.ok) throw new Error('push ' + r.status);
+        return r.json().then(function (res) { versions[key] = res.version || ((versions[key] || 0) + 1); setBadge('synced'); });
+      }).catch(function () { setBadge('offline'); });
+    },
+
+    resolveConflict: function (key, current, isRetry) {
+      if (isRetry) { setBadge('offline'); return; } // one retry only
+      versions[key] = current.version || 0;
+      var all = loadTombs();
+      all[key] = mergeTombs(all[key] || {}, current.tombstones || {});
+      saveTombs(all);
+      this.applyMerged(key, mergeItems(localItems(key), current.items || [], all[key]));
+      this.push(key, true);
+    }
+  };
+
+  window.PHARMETRIKS_SYNC = Sync;
+
+  // Kick off using cached features; the license block also calls onFeaturesReady
+  // after a fresh verify. didInitialPull guards against a double pull.
+  function boot() { Sync.onFeaturesReady(); }
+  if (document.readyState === 'complete') setTimeout(boot, 0);
+  else window.addEventListener('load', function () { setTimeout(boot, 0); });
+  window.addEventListener('online', function () { didInitialPull = false; Sync.onFeaturesReady(); });
 })();
 </script>
 

@@ -5,11 +5,19 @@ import Icon from '@/components/ui/Icon';
 import Field from '@/components/ui/Field';
 import FormAlert from '@/components/ui/FormAlert';
 import { uploadReceiptAction } from './actions';
+import type { FeatureMap } from '@/lib/features';
 
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
 const MAX_MB = 5;
 
-export default function UploadForm() {
+type Props = {
+  /** Add-ons picked in the checkout — submitted alongside the receipt. */
+  requestedFeatures?: FeatureMap;
+  /** Extra disable condition (e.g. upgrade mode with nothing picked). */
+  submitDisabled?: boolean;
+};
+
+export default function UploadForm({ requestedFeatures, submitDisabled }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -50,6 +58,7 @@ export default function UploadForm() {
     if (!file) { setError('Pumili ka muna ng receipt screenshot.'); return; }
     const fd = new FormData(e.currentTarget);
     fd.set('file', file);
+    fd.set('requested_features', JSON.stringify(requestedFeatures ?? {}));
     startTransition(async () => {
       const res = await uploadReceiptAction(fd);
       if (res && 'ok' in res && !res.ok) setError(res.error);
@@ -143,7 +152,7 @@ export default function UploadForm() {
 
       <button
         type="submit"
-        disabled={pending || !file}
+        disabled={pending || !file || submitDisabled}
         className="btn-primary mt-1 justify-center text-[14px] py-3"
       >
         {pending ? 'Uploading…' : <>I-submit ang receipt <Icon name="arrow-right" size={15} /></>}

@@ -1,4 +1,4 @@
-// Serves the single-file RXaudit HTML at /app — for approved users only.
+// Serves the single-file Pharmetriks HTML at /app — for approved users only.
 //
 // Auth gating lives here (Node runtime) instead of in middleware: Next.js
 // middleware always runs on the Edge runtime, where Vercel's injected

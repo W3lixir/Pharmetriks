@@ -10,10 +10,11 @@ export default function CTABand() {
           <div aria-hidden className="absolute -inset-6 rounded-[40px] bg-lyna-cta opacity-30 blur-3xl" />
           <GlassCard tone="strong" className="relative p-8 sm:p-12 text-center">
             <h2 className="text-[26px] sm:text-4xl font-extrabold tracking-tight">
-              Sulit na ₱249. <br className="sm:hidden" />Lifetime access.
+              ₱249 para sa <br className="sm:hidden" />peace of mind mo.
             </h2>
             <p className="mt-3 text-[14px] sm:text-base font-medium text-ink-2/80 max-w-xl mx-auto leading-relaxed">
-              Mas mura pa sa isang full meal sa fastfood. Pero gagamitin mo every day para sa botika mo.
+              Mas mura pa sa isang grocery run — pero gagamitin mo araw-araw, at
+              hindi ka na kakabahan sa listahan. One-time lang, lifetime access.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/signup" className="btn-primary text-[15px] px-5 py-3">

@@ -3,11 +3,16 @@
 import { useState, useTransition } from 'react';
 import Icon from '@/components/ui/Icon';
 import GlassCard from '@/components/ui/GlassCard';
+import Toggle from '@/components/ui/Toggle';
+import { FEATURES } from '@/lib/features';
+import { APP_PRICE_PHP, ADDON_PRICE_PHP, peso } from '@/lib/pricing';
 import {
   approveUserAction,
   rejectUserAction,
   revokeUserAction,
   restoreUserAction,
+  setFeatureAction,
+  applyRequestedFeaturesAction,
   getReceiptSignedUrl,
 } from './actions';
 import type { ProfileStatus } from '@/lib/auth';
@@ -23,6 +28,8 @@ type Profile = {
   approved_at: string | null;
   notes: string | null;
   created_at: string;
+  features: Record<string, boolean> | null;
+  requested_features: Record<string, boolean> | null;
 };
 
 const STATUS_TONE: Record<ProfileStatus, string> = {
@@ -54,6 +61,39 @@ export default function UserRow({ profile }: { profile: Profile }) {
   const [revokeReason, setRevokeReason] = useState('');
   const [approveNotes, setApproveNotes] = useState('');
 
+  // Per-account add-on features (optimistic local copy).
+  const [features, setFeatures] = useState<Record<string, boolean>>(profile.features ?? {});
+
+  // Add-ons the user picked at checkout but doesn't have yet.
+  const requested = profile.requested_features ?? {};
+  const requestedNew = FEATURES.filter(
+    f => requested[f.key] === true && features[f.key] !== true,
+  );
+  // What the GCash screenshot amount should read:
+  // new signups pay base + add-ons; approved users (upgrades) pay add-ons only.
+  const isFirstPurchase = profile.status === 'pending' || profile.status === 'awaiting_payment';
+  const expectedTotal = (isFirstPurchase ? APP_PRICE_PHP : 0) + requestedNew.length * ADDON_PRICE_PHP;
+
+  function toggleFeature(key: string) {
+    const nextVal = !features[key];
+    const prev = features;
+    setFeatures({ ...features, [key]: nextVal }); // optimistic
+    setError(null);
+    setActionLabel(`feature:${key}`);
+    const fd = new FormData();
+    fd.set('target_user_id', profile.id);
+    fd.set('feature_key', key);
+    fd.set('enabled', String(nextVal));
+    startTransition(async () => {
+      const res = await setFeatureAction(fd);
+      if (res && 'ok' in res && !res.ok) {
+        setError(res.error);
+        setFeatures(prev); // revert on failure
+      }
+      setActionLabel(null);
+    });
+  }
+
   async function loadReceipt() {
     if (!profile.receipt_url || receiptUrl || loadingReceipt) return;
     setLoadingReceipt(true);
@@ -80,7 +120,37 @@ export default function UserRow({ profile }: { profile: Profile }) {
     const fd = new FormData();
     fd.set('target_user_id', profile.id);
     if (approveNotes.trim()) fd.set('notes', approveNotes.trim());
+    // The server auto-applies requested add-ons on approve — mirror it locally
+    // so the toggles don't look stale until the page refreshes.
+    if (requestedNew.length) {
+      setFeatures(prev => {
+        const next = { ...prev };
+        for (const f of requestedNew) next[f.key] = true;
+        return next;
+      });
+    }
     run('Approving', approveUserAction, fd);
+  }
+
+  function applyRequested() {
+    const prev = features;
+    setFeatures(p => {
+      const next = { ...p };
+      for (const f of requestedNew) next[f.key] = true;
+      return next;
+    });
+    setError(null);
+    setActionLabel('ApplyRequested');
+    const fd = new FormData();
+    fd.set('target_user_id', profile.id);
+    startTransition(async () => {
+      const res = await applyRequestedFeaturesAction(fd);
+      if (res && 'ok' in res && !res.ok) {
+        setError(res.error);
+        setFeatures(prev); // revert on failure
+      }
+      setActionLabel(null);
+    });
   }
 
   function reject() {
@@ -137,6 +207,11 @@ export default function UserRow({ profile }: { profile: Profile }) {
             <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${STATUS_TONE[profile.status]}`}>
               {STATUS_LABEL[profile.status]}
             </span>
+            {requestedNew.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-800">
+                +{requestedNew.length} add-on{requestedNew.length > 1 ? 's' : ''} requested
+              </span>
+            )}
           </div>
           <div className="text-[12px] font-semibold text-ink-2/70 truncate">
             {profile.email} · {profile.pharmacy_name || 'no pharmacy'}
@@ -204,6 +279,66 @@ export default function UserRow({ profile }: { profile: Profile }) {
             ) : (
               <ReceiptPlaceholder label="No receipt uploaded yet." />
             )}
+
+            {/* Requested add-ons + expected GCash amount, right beside the
+                receipt so the amount check is unmissable. */}
+            {requestedNew.length > 0 && (
+              <div className="mt-3 rounded-glass border border-amber-200 bg-amber-50/70 p-3">
+                <div className="text-[11px] font-extrabold uppercase tracking-[1.5px] text-amber-800">
+                  Requested add-ons
+                </div>
+                <ul className="mt-1.5 space-y-1">
+                  {requestedNew.map(f => (
+                    <li key={f.key} className="flex items-center justify-between gap-2 text-[12.5px] font-semibold text-ink-2">
+                      <span>{f.label}</span>
+                      <span className="font-mono text-[11.5px] font-bold text-ink-2/70">{peso(ADDON_PRICE_PHP)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-2 border-t border-amber-200 pt-2 text-[12.5px] font-extrabold text-ink">
+                  Expected:{' '}
+                  {isFirstPurchase
+                    ? `${peso(APP_PRICE_PHP)} + ${requestedNew.length} × ${peso(ADDON_PRICE_PHP)} = ${peso(expectedTotal)}`
+                    : `${requestedNew.length} × ${peso(ADDON_PRICE_PHP)} = ${peso(expectedTotal)} (new add-ons only)`}
+                </div>
+                {profile.status === 'approved' && (
+                  <button
+                    type="button"
+                    onClick={applyRequested}
+                    disabled={pending}
+                    className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-amber-600 px-3 py-2 text-[13px] font-bold text-white hover:bg-amber-700 disabled:opacity-60"
+                  >
+                    {pending && actionLabel === 'ApplyRequested'
+                      ? 'Applying…'
+                      : <><Icon name="check" size={14} strokeWidth={2.6} /> Apply requested add-ons</>}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Add-on features — admin toggles per account */}
+          <div className="lg:col-span-2 pt-4 border-t border-white/60">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[11px] font-extrabold uppercase tracking-[1.5px] text-accent">
+                Add-on features
+              </div>
+              <span className="text-[11px] font-semibold text-ink-2/55">
+                {Object.values(features).filter(Boolean).length} of {FEATURES.length} on
+              </span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {FEATURES.map(f => (
+                <Toggle
+                  key={f.key}
+                  label={f.label}
+                  description={f.description}
+                  checked={!!features[f.key]}
+                  disabled={pending}
+                  onChange={() => toggleFeature(f.key)}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Bottom: actions */}

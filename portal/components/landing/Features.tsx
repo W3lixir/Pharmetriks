@@ -13,32 +13,32 @@ const FEATURES: Feature[] = [
   {
     icon: 'wifi-off',
     title: 'Works fully offline',
-    body: 'Once installed, the app runs without internet. Perfect sa mga lugar na may unstable signal — barangay clinics, rural pharmacies, etc.',
+    body: 'Kahit brownout o walang load, tuloy ang benta. Once installed, hindi na kailangan ng internet — perfect sa probinsya at sa mga lugar na mahina ang signal.',
   },
   {
     icon: 'lock',
     title: 'Data stays sa phone mo',
-    body: "Walang cloud, walang server. Lahat ng sales, inventory, expenses — naka-save lang sa device mo. 100% private.",
+    body: 'Walang cloud, walang server. Lahat ng sales, inventory, expenses — naka-save lang sa device mo. Ikaw lang ang may hawak, 100% private.',
   },
   {
     icon: 'dispense',
     title: 'Fast dispensing',
-    body: 'Search products, build a cart, dispense — auto-deduct na ang stock. May built-in low-stock at expiry alerts.',
+    body: 'Search products, build a cart, dispense — auto-deduct na ang stock. Hindi mo na kailangan i-update ang kwaderno pagkatapos ng bawat benta.',
   },
   {
     icon: 'inventory',
     title: 'Inventory tracking',
-    body: 'Manage products, batches, expiry dates, at SRP/cost. Import via CSV if may existing list ka na.',
+    body: 'Products, batches, expiry dates, SRP at cost — kabisado mo ang laman ng botika mo nang hindi nagbibilang isa-isa. May CSV import kung may listahan ka na.',
   },
   {
     icon: 'opex',
-    title: 'Track expenses',
-    body: 'Log rent, utilities, supplies — see your real margins. Filter by today, week, month, or all-time.',
+    title: 'Alam mo ang totoong kita',
+    body: 'Log ang rent, kuryente, supplies — makikita mo ang tunay na tubo, hindi tantya. Filter by today, week, month, or all-time.',
   },
   {
     icon: 'zap',
     title: 'No subscription',
-    body: 'One-time ₱249 lang. Walang monthly bill. Tama ka sa technology na hindi gugugutom sa pocket mo every month.',
+    body: 'One-time ₱249 lang. Walang monthly bill na gugutom sa budget mo. Bayad ka minsan, tapos tahimik na ang isip mo.',
   },
 ];
 
@@ -48,7 +48,7 @@ export default function Features() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto">
           <Pill tone="blue">
-            <Icon name="sparkle" size={11} /> Bakit RXaudit?
+            <Icon name="sparkle" size={11} /> Bakit Pharmetriks?
           </Pill>
           <h2 className="mt-4 text-[28px] sm:text-4xl font-extrabold tracking-tight">
             Built for real pharmacies, hindi para sa demo.

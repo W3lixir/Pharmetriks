@@ -1,38 +1,19 @@
-// Server component — at render time, checks portal/public/img/ for a real
-// GCash QR file. Falls back to the placeholder SVG if none is found.
-// Order of preference: gcash-qr.png → .jpg → .jpeg → .webp → placeholder
+// Presentational GCash payment card. The QR image is resolved server-side in
+// page.tsx (node:fs) and passed in as a prop, so this card can render inside
+// the client checkout tree with a live computed amount.
 
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import Icon from '@/components/ui/Icon';
 import CopyRow from './CopyRow';
 
 type Props = {
+  qrSrc: string;
+  isRealQr: boolean;
   gcashNumber: string;
   gcashName: string;
   amount: string;
 };
 
-const QR_CANDIDATES = [
-  'gcash-qr.png',
-  'gcash-qr.jpg',
-  'gcash-qr.jpeg',
-  'gcash-qr.webp',
-] as const;
-
-function resolveQrSrc(): { src: string; isReal: boolean } {
-  const dir = path.join(process.cwd(), 'public', 'img');
-  for (const f of QR_CANDIDATES) {
-    if (existsSync(path.join(dir, f))) {
-      return { src: `/img/${f}`, isReal: true };
-    }
-  }
-  return { src: '/img/gcash-qr-placeholder.svg', isReal: false };
-}
-
-export default function GcashCard({ gcashNumber, gcashName, amount }: Props) {
-  const { src, isReal } = resolveQrSrc();
-
+export default function GcashCard({ qrSrc, isRealQr, gcashNumber, gcashName, amount }: Props) {
   return (
     <div className="rounded-glass border border-white/65 bg-white/80 backdrop-blur-md p-5 shadow-glass">
       <div className="flex items-center justify-between">
@@ -48,12 +29,12 @@ export default function GcashCard({ gcashNumber, gcashName, amount }: Props) {
         <div className="rounded-2xl bg-white border border-pink p-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={src}
+            src={qrSrc}
             alt="GCash QR code"
             className="block h-44 w-44 sm:h-52 sm:w-52 object-contain"
           />
         </div>
-        {!isReal && (
+        {!isRealQr && (
           <p className="mt-2 text-[11px] text-ink-2/55 font-semibold">
             Placeholder — drop your real QR at <code className="font-mono text-[10.5px]">portal/public/img/gcash-qr.png</code>
           </p>

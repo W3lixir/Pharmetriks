@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>RXaudit</title>
+  <title>Pharmetriks</title>
   <meta name="description" content="Offline-first pharmacy audit tool — dispensing, inventory, and OPEX tracking.">
 
   <!-- PWA manifest + theme -->
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="RXaudit">
+  <meta name="apple-mobile-web-app-title" content="Pharmetriks">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.svg">
   <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
   <link rel="mask-icon" href="/icons/icon-monochrome.svg" color="#0033FF">
@@ -931,15 +931,15 @@
 
 <!-- ══════════════════════ MOBILE HEADER ══════════════════════ -->
 <header class="mobile-header">
-  <img src="/icons/icon.svg" alt="RXaudit" class="mob-logo">
+  <img src="/icons/icon.svg" alt="Pharmetriks" class="mob-logo">
   <div class="mob-header-text">
-    <span class="mob-title">RXaudit Starter</span>
+    <span class="mob-title">Pharmetriks Basic</span>
     <span class="mob-sub">Offline Pharmacy App</span>
   </div>
   <button type="button" class="mob-guide-btn" onclick="startTour()" aria-label="Open guided tour" title="How to use">
     <svg class="ic ic-sm" style="stroke:white;"><use href="#i-help"/></svg>
   </button>
-  <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&utm_medium=mobile_header" target="_blank" rel="noopener" class="mob-upgrade-btn">
+  <a href="https://pharmetriks.vercel.app/landing?utm_source=basic_app&utm_medium=mobile_header" target="_blank" rel="noopener" class="mob-upgrade-btn">
     Upgrade
     <svg class="ic ic-sm" style="margin-left:2px;vertical-align:-3px;stroke:white;"><use href="#i-arrow-right"/></svg>
   </a>
@@ -950,8 +950,8 @@
   <div class="sidebar-brand">
     <img
       src="/icons/icon.svg"
-      alt="RXaudit">
-    <div class="app-name">RXaudit Starter App</div>
+      alt="Pharmetriks">
+    <div class="app-name">Pharmetriks Basic</div>
     <div class="app-sub">Offline Pharmacy MVP</div>
   </div>
 
@@ -976,8 +976,8 @@
   <div class="upgrade-cta">
     <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
     <div class="uc-sub">Multi-device sync, cloud backup, team access &amp; more.</div>
-    <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&amp;utm_medium=sidebar_cta" target="_blank" rel="noopener" class="uc-btn" onclick="trackUpgradeClick()">
-      Upgrade to RXaudit
+    <a href="https://pharmetriks.vercel.app/landing?utm_source=basic_app&amp;utm_medium=sidebar_cta" target="_blank" rel="noopener" class="uc-btn" onclick="trackUpgradeClick()">
+      Upgrade to Pharmetriks
       <svg class="ic ic-sm" style="margin-left:4px;vertical-align:-3px;"><use href="#i-arrow-right"/></svg>
     </a>
   </div>
@@ -1190,8 +1190,8 @@
   <div class="upgrade-cta mobile-only-cta" style="margin-top:24px;">
     <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
     <div class="uc-sub">Multi-device sync, cloud backup, team access &amp; more.</div>
-    <a href="https://rxaudit.vercel.app/landing?utm_source=starter_app&utm_medium=content_cta" target="_blank" rel="noopener" class="uc-btn">
-      Upgrade to RXaudit
+    <a href="https://pharmetriks.vercel.app/landing?utm_source=basic_app&utm_medium=content_cta" target="_blank" rel="noopener" class="uc-btn">
+      Upgrade to Pharmetriks
       <svg class="ic ic-sm" style="margin-left:4px;vertical-align:-3px;"><use href="#i-arrow-right"/></svg>
     </a>
   </div>
@@ -1348,6 +1348,7 @@ function dbLoad(key) {
 }
 function dbSave(key, data) {
   localStorage.setItem(KEYS[key], JSON.stringify(data));
+  if (typeof window._syncPush === 'function') window._syncPush(key);
 }
 
 // ══════════════════ UTILS ══════════════════
@@ -1427,6 +1428,7 @@ let invData = dbLoad('inv');
   let changed = false;
   for (const p of invData) {
     if (!p.batch_no || !p.batch_no.trim()) { p.batch_no = genBatchNo(); changed = true; }
+    if (!p.updated_at) { p.updated_at = p.created_at || new Date().toISOString(); changed = true; }
   }
   if (changed) dbSave('inv', invData);
 })();
@@ -1583,6 +1585,7 @@ function saveProduct() {
 
 function deleteProduct(id) {
   if (!confirm('Delete this product? This cannot be undone.')) return;
+  if (typeof window._syncTombstone === 'function') window._syncTombstone('inv', id);
   invData = invData.filter(x => x.id !== id);
   dbSave('inv', invData);
   renderInventory();
@@ -1935,7 +1938,7 @@ function dispenseCart() {
   const tx = {
     id: uid(), date: today(), time, order_number: orderNum,
     customer, items: cart.map(c => ({ ...c })),
-    total, created_at: now.toISOString(),
+    total, created_at: now.toISOString(), updated_at: now.toISOString(),
   };
   salesData.unshift(tx);
   dbSave('sales', salesData);
@@ -1971,6 +1974,7 @@ function renderSales() {
 
 function deleteTransaction(id) {
   if (!confirm('Delete this transaction?\n\nNote: Stock will NOT be restored automatically.')) return;
+  if (typeof window._syncTombstone === 'function') window._syncTombstone('sales', id);
   salesData = salesData.filter(x => x.id !== id);
   dbSave('sales', salesData);
   renderSales();
@@ -2088,7 +2092,8 @@ function addExpense() {
   if (!desc)       { toast('Description is required.', 'error'); return; }
   if (amount <= 0) { toast('Amount must be greater than 0.', 'error'); return; }
 
-  expData.push({ id: uid(), date, category: cat, description: desc, amount, created_at: new Date().toISOString() });
+  const _expNow = new Date().toISOString();
+  expData.push({ id: uid(), date, category: cat, description: desc, amount, created_at: _expNow, updated_at: _expNow });
   dbSave('exp', expData);
   document.getElementById('expDesc').value = '';
   document.getElementById('expAmount').value = '';
@@ -2099,6 +2104,7 @@ function addExpense() {
 
 function deleteExpense(id) {
   if (!confirm('Delete this expense?')) return;
+  if (typeof window._syncTombstone === 'function') window._syncTombstone('exp', id);
   expData = expData.filter(x => x.id !== id);
   dbSave('exp', expData);
   renderExpenses();
@@ -2235,7 +2241,7 @@ const TOUR_STEPS = [
   {
     target: null,
     icon: 'i-wave',
-    title: 'Welcome to RXaudit',
+    title: 'Welcome to Pharmetriks',
     body: 'Your offline-first pharmacy companion. Lahat ng data, naka-save sa device mo (localStorage) — walang signup, walang cloud.',
     tip: 'You can reopen this tour anytime via the <strong>How to Use</strong> button in the sidebar.'
   },
@@ -2527,7 +2533,8 @@ function visibleEl(...selectors) {
 
 // Dim panels: clicking outside spotlight area closes the tour
 ['tourDimTop','tourDimBottom','tourDimLeft','tourDimRight'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', () => {
     if (tourActive) closeTour();
   });
 });
@@ -2546,6 +2553,26 @@ window.addEventListener('scroll', () => { if (tourActive) positionTour(); }, tru
 if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   setTimeout(startTour, 500);
 }
+
+// ── Sync bridge ──────────────────────────────────────────────────────────────
+// Exposes in-scope let variables (invData / salesData / expData) to the sync
+// engine script that loads after this block.
+window._syncGetData = function (col) {
+  if (col === 'inv')   return invData;
+  if (col === 'sales') return salesData;
+  if (col === 'exp')   return expData;
+  return [];
+};
+window._syncApply = function (col, merged) {
+  // Write directly — bypasses dbSave hook so we don't re-trigger a push.
+  var lsKey = col === 'inv' ? 'rxmvp_inventory' : col === 'sales' ? 'rxmvp_sales' : 'rxmvp_expenses';
+  try { localStorage.setItem(lsKey, JSON.stringify(merged)); } catch {}
+  if (col === 'inv')   { invData   = merged; if (typeof renderInventory  === 'function') { renderInventory(); renderProductList(); } }
+  if (col === 'sales') { salesData = merged; if (typeof renderSales      === 'function')   renderSales(); }
+  if (col === 'exp')   { expData   = merged; if (typeof renderExpenses   === 'function')   renderExpenses(); }
+  if (typeof renderOpexStats === 'function') renderOpexStats();
+  if (typeof renderSalesLog  === 'function') renderSalesLog();
+};
 </script>
 
 <!-- ══════════════════════ PWA BOOTSTRAP + LICENSE CHECK ══════════════════════ -->
@@ -2603,10 +2630,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   // soft-fails and the app continues to work — the goal here is to wire up
   // the contract so later phases drop in cleanly.
 
-  var LIC_KEY      = 'rxaudit_license_v1';
+  var LIC_KEY      = 'pharmetriks_license_v1';
   var GRACE_MS     = 7 * 24 * 60 * 60 * 1000;   // 7 days offline grace
   var REVERIFY_MS  = 24 * 60 * 60 * 1000;       // re-check at most once per day
-  var TOKEN_KEY    = 'rxaudit_jwt';             // future: set by /login flow
+  var TOKEN_KEY    = 'pharmetriks_jwt';             // future: set by /login flow
 
   function loadLicense() {
     try { return JSON.parse(localStorage.getItem(LIC_KEY) || 'null'); }
@@ -2662,7 +2689,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   }
 
   function redirectToLogin(reason) {
-    try { sessionStorage.setItem('rxaudit_login_reason', reason || ''); } catch (e) {}
+    try { sessionStorage.setItem('pharmetriks_login_reason', reason || ''); } catch (e) {}
     // Only redirect when /login is actually reachable (i.e. served by Next.js).
     // In standalone file:// mode, show the block instead so we don't bounce.
     if (location.protocol === 'http:' || location.protocol === 'https:') {
@@ -2717,9 +2744,12 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         saveLicense({
           status: data.status || 'approved',
           expires_at: data.expires_at || null,
+          features: data.features || {},
           verified_at: new Date().toISOString()
         });
+        window.PHARMETRIKS_FEATURES = data.features || {};
         hideOfflineBlock();
+        if (typeof window.__PHARMETRIKS_SYNC_INIT === 'function') window.__PHARMETRIKS_SYNC_INIT();
       })
       .catch(function (err) {
         // Network or 5xx error: fall back to cache if still within grace.
@@ -2750,14 +2780,227 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   }
 
   window.addEventListener('online',  verifyLicense);
-  window.addEventListener('offline', function () { /* cached license keeps app running */ });
+  window.addEventListener('offline', function () { /* cached license keeps app running — sync pauses automatically */ });
+
+  // Per-account add-on feature entitlements. Hydrate from the cached license
+  // so gating works offline; refreshed by verifyLicense() when online.
+  // Gate a feature's UI with: if (window.PHARMETRIKS_HAS('feature_key')) { … }
+  window.PHARMETRIKS_FEATURES = (loadLicense() || {}).features || {};
+  window.PHARMETRIKS_HAS = function (key) {
+    var f = (loadLicense() || {}).features || window.PHARMETRIKS_FEATURES || {};
+    return f[key] === true;
+  };
 
   // Expose minimal hooks for the future Next.js wrapper to drive auth state.
-  window.RXAUDIT_AUTH = {
+  window.PHARMETRIKS_AUTH = {
     setToken: function (t) { try { localStorage.setItem(TOKEN_KEY, t || ''); } catch (e) {} },
     clear:    function () { clearLicense(); try { localStorage.removeItem(TOKEN_KEY); } catch (e) {} },
     verify:   verifyLicense
   };
+})();
+</script>
+
+<!-- ══════════════════════ CLOUD SYNC ENGINE ══════════════════════ -->
+<script>
+// Enabled only for accounts with the cloud_sync add-on.
+// Pull on load + debounced push on every save + tombstones for deletes.
+(function () {
+  'use strict';
+
+  var SYNC_STATE_KEY = 'pharmetriks_sync_v1';
+  var pushTimers = {};
+  var VERSIONS   = { inv: 0, sales: 0, exp: 0 };
+  var TOMBSTONES = { inv: {}, sales: {}, exp: {} };
+
+  function loadSyncState() {
+    try { return JSON.parse(localStorage.getItem(SYNC_STATE_KEY) || 'null') || {}; } catch { return {}; }
+  }
+  function saveSyncState(s) {
+    try { localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(s)); } catch {}
+  }
+
+  function syncEnabled() {
+    return !!(navigator.onLine &&
+              typeof window.PHARMETRIKS_HAS === 'function' &&
+              window.PHARMETRIKS_HAS('cloud_sync'));
+  }
+
+  // ── Merge two item arrays by id ────────────────────────────────
+  // Tombstones win; newer updated_at / created_at wins on conflict.
+  function mergeItems(local, remote, localTombs, remoteTombs) {
+    var allTombs = Object.assign({}, localTombs || {}, remoteTombs || {});
+    var map = {};
+    (remote || []).forEach(function (r) {
+      if (r && r.id && !allTombs[r.id]) map[r.id] = r;
+    });
+    (local || []).forEach(function (l) {
+      if (!l || !l.id || allTombs[l.id]) return;
+      if (!map[l.id]) { map[l.id] = l; return; }
+      var lt = +new Date(l.updated_at || l.created_at || 0);
+      var rt = +new Date(map[l.id].updated_at || map[l.id].created_at || 0);
+      if (lt >= rt) map[l.id] = l;
+    });
+    return Object.keys(map).map(function (k) { return map[k]; });
+  }
+
+  // ── Sync status pill (top-right, auto-hides) ──────────────────
+  var _dotEl, _dotTimer;
+  function showDot(icon, text, ms) {
+    if (!_dotEl) {
+      _dotEl = document.createElement('div');
+      _dotEl.style.cssText =
+        'position:fixed;top:12px;right:14px;z-index:9990;pointer-events:none;' +
+        'display:flex;align-items:center;gap:5px;' +
+        "font-family:'Plus Jakarta Sans',system-ui,sans-serif;" +
+        'font-size:11.5px;font-weight:700;color:#0033FF;' +
+        'background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,255,0.2);' +
+        'border-radius:20px;padding:4px 10px 4px 7px;' +
+        'box-shadow:0 2px 10px rgba(0,51,255,0.14);' +
+        'transition:opacity .3s;opacity:0;';
+      document.body.appendChild(_dotEl);
+    }
+    _dotEl.innerHTML = '<span style="font-size:13px">' + icon + '</span><span>' + text + '</span>';
+    _dotEl.style.opacity = '1';
+    clearTimeout(_dotTimer);
+    if (ms) _dotTimer = setTimeout(function () { _dotEl.style.opacity = '0'; }, ms);
+  }
+
+  // ── Apply a merged collection to in-scope app variables ───────
+  function applyMerge(col, merged, newTombs) {
+    if (typeof window._syncApply === 'function') window._syncApply(col, merged);
+    if (newTombs) {
+      TOMBSTONES[col] = newTombs;
+      var st = loadSyncState();
+      st.tombstones = st.tombstones || {};
+      st.tombstones[col] = newTombs;
+      saveSyncState(st);
+    }
+  }
+
+  // ── Push one collection to server (retries on 409 conflict) ───
+  function pushCollection(col, baseVersion, attempt) {
+    attempt = attempt || 0;
+    if (!syncEnabled()) return;
+    var items = (typeof window._syncGetData === 'function') ? window._syncGetData(col) : [];
+    var tombs = TOMBSTONES[col] || {};
+    showDot('⏫', 'Saving…');
+    fetch('/api/sync', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: col, items: items, tombstones: tombs, baseVersion: baseVersion })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.conflict && attempt < 3) {
+        var st     = loadSyncState();
+        var lT     = (st.tombstones || {})[col] || {};
+        var rT     = data.current.tombstones || {};
+        var merged = mergeItems(items, data.current.items || [], lT, rT);
+        applyMerge(col, merged, Object.assign({}, lT, rT));
+        pushCollection(col, data.current.version, attempt + 1);
+        return;
+      }
+      if (data.ok) {
+        var st = loadSyncState();
+        st.versions = st.versions || {};
+        st.versions[col] = data.version;
+        saveSyncState(st);
+        VERSIONS[col] = data.version;
+        showDot('☁', 'Saved', 2500);
+      }
+    })
+    .catch(function () { showDot('⚠', 'Sync error', 3500); });
+  }
+
+  // ── Debounce pushes — fire 2 s after last write ───────────────
+  function schedulePush(col) {
+    clearTimeout(pushTimers[col]);
+    pushTimers[col] = setTimeout(function () {
+      if (!syncEnabled()) return;
+      var st = loadSyncState();
+      pushCollection(col, ((st.versions || {})[col]) || 0);
+    }, 2000);
+  }
+
+  // ── Pull all, merge with local, save, then push merged back ───
+  function syncPull() {
+    if (!syncEnabled()) return;
+    showDot('⏬', 'Syncing…');
+    fetch('/api/sync', { credentials: 'include' })
+    .then(function (r) {
+      if (r.status === 401 || r.status === 403) return null; // not logged in / not entitled
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      if (!data) return;
+      var st = loadSyncState();
+      var lT = st.tombstones || { inv: {}, sales: {}, exp: {} };
+      var didChange = false;
+
+      ['inv', 'sales', 'exp'].forEach(function (col) {
+        var srv    = data[col] || { items: [], tombstones: {}, version: 0 };
+        var loc    = (typeof window._syncGetData === 'function') ? window._syncGetData(col) : [];
+        var newT   = Object.assign({}, lT[col] || {}, srv.tombstones || {});
+        var merged = mergeItems(loc, srv.items || [], lT[col], srv.tombstones);
+
+        // Use sorted id-list comparison to detect real content changes
+        var locIds    = (loc    || []).map(function (x) { return x.id; }).sort().join(',');
+        var mergedIds = merged.map(function (x) { return x.id; }).sort().join(',');
+        if (locIds !== mergedIds) { applyMerge(col, merged, newT); didChange = true; }
+        else TOMBSTONES[col] = newT;
+
+        st.versions = st.versions || {};
+        st.versions[col] = srv.version;
+        st.tombstones = st.tombstones || {};
+        st.tombstones[col] = newT;
+        VERSIONS[col] = srv.version;
+      });
+
+      saveSyncState(st);
+      showDot('☁', didChange ? 'Synced ✓' : 'Up to date', 2500);
+
+      // Upload any local-only records the server doesn't have yet
+      ['inv', 'sales', 'exp'].forEach(schedulePush);
+    })
+    .catch(function () { showDot('⚠', 'Sync failed', 3000); });
+  }
+
+  // ── Hooks exposed to the main app script ──────────────────────
+  // Called by overridden dbSave (every write)
+  window._syncPush = schedulePush;
+
+  // Called by delete functions before removing an item
+  window._syncTombstone = function (col, id) {
+    TOMBSTONES[col] = TOMBSTONES[col] || {};
+    TOMBSTONES[col][id] = new Date().toISOString();
+    var st = loadSyncState();
+    st.tombstones = st.tombstones || {};
+    st.tombstones[col] = TOMBSTONES[col];
+    saveSyncState(st);
+  };
+
+  // ── Init (called from verifyLicense success + DOMContentLoaded) ──
+  var _inited = false;
+  function initSync() {
+    if (!syncEnabled()) return;
+    if (_inited) { syncPull(); return; } // re-pull if called again (feature newly granted)
+    _inited = true;
+    var st = loadSyncState();
+    VERSIONS   = Object.assign({ inv: 0, sales: 0, exp: 0 }, st.versions   || {});
+    TOMBSTONES = Object.assign({ inv: {}, sales: {}, exp: {} }, st.tombstones || {});
+    if (navigator.onLine) syncPull();
+    window.addEventListener('online', syncPull);
+  }
+
+  window.__PHARMETRIKS_SYNC_INIT = initSync;
+
+  // Kick off using cached license (avoids waiting for network verify round-trip)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(initSync, 800); });
+  } else {
+    setTimeout(initSync, 800);
+  }
 })();
 </script>
 
