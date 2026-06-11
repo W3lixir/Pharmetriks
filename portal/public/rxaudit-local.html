@@ -1096,6 +1096,53 @@
     </div>
   </div>
 
+  <style>
+    .smart-alerts { margin: 0 0 14px; }
+    .sa-card {
+      border: 1px solid #fcd9b6;
+      background: linear-gradient(180deg, #fff8f0, #fffdfb);
+      border-radius: 14px; padding: 14px 16px;
+      box-shadow: 0 4px 16px rgba(180,83,9,0.06);
+    }
+    .sa-card.sa-clear {
+      border-color: #bbf7d0; background: linear-gradient(180deg,#f0fdf4,#fffffe);
+      display:flex; align-items:center; gap:10px; color:#166534; font-size:13px;
+    }
+    .sa-clear-ic { font-size:18px; color:#16a34a; }
+    .sa-head { display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
+    .sa-head strong { font-size:14px; color:#7c2d12; }
+    .sa-sub { font-size:11.5px; color:#b45309; }
+    .sa-chips { display:flex; flex-wrap:wrap; gap:8px; }
+    .sa-chip {
+      font-size:11.5px; font-weight:700; padding:4px 10px;
+      border:1.5px solid #e5e7eb; border-radius:999px; color:#6b7280; background:#fff;
+    }
+    .sa-block { margin-top:6px; }
+    .sa-block summary {
+      cursor:pointer; list-style:none; padding:7px 0;
+      font-size:12.5px; font-weight:700; color:#374151;
+      display:flex; align-items:center; gap:8px;
+    }
+    .sa-block summary::-webkit-details-marker { display:none; }
+    .sa-dot { width:8px; height:8px; border-radius:50%; display:inline-block; flex:0 0 auto; }
+    .sa-count {
+      margin-left:auto; font-size:11px; font-weight:800;
+      background:#f3f4f6; color:#4b5563; padding:1px 8px; border-radius:999px;
+    }
+    .sa-list { margin:2px 0 8px; padding-left:18px; }
+    .sa-list li { font-size:12.5px; color:#374151; padding:2px 0; }
+    .sa-meta { color:#9ca3af; font-size:11px; margin-left:4px; }
+    .sa-reorder { margin-top:12px; border-top:1px dashed #fcd9b6; padding-top:10px; }
+    .sa-reorder-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .sa-reorder-head strong { font-size:13px; color:#7c2d12; }
+    .sa-reorder-text {
+      margin:0; white-space:pre-wrap; word-break:break-word;
+      font-size:12px; line-height:1.5; color:#44403c;
+      background:#fff; border:1px solid #f3e8d8; border-radius:10px; padding:10px 12px;
+      font-family:inherit; max-height:220px; overflow:auto;
+    }
+  </style>
+
   <!-- ════ INVENTORY ════ -->
   <div id="panel-inventory" class="panel">
     <div class="section-header">
@@ -1104,6 +1151,9 @@
     </div>
 
     <div class="stats-row" id="invStats" data-tour="inv-stats"></div>
+
+    <!-- Smart Alerts & Reorder (add-on: 'smart_alerts'). Hidden unless entitled. -->
+    <div id="smartAlerts" class="smart-alerts" style="display:none;" data-tour="smart-alerts"></div>
 
     <div style="margin-bottom:10px;">
       <input type="text" id="invSearch" placeholder="Search products…" oninput="renderInventory()" style="width:100%;">
@@ -1534,7 +1584,109 @@ function renderInventory() {
       <div class="sval ${outStock > 0 ? 'red' : ''}">${outStock}</div>
     </div>
   `;
+
+  renderSmartAlerts();
 }
+
+// ══════════════════ SMART ALERTS & REORDER (add-on: 'smart_alerts') ══════════════════
+function smartAlertsEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('smart_alerts')); }
+
+// Per-product reorder level; falls back to 10 when unset.
+function reorderThreshold(p) {
+  const r = Number(p.reorder_level);
+  return (isFinite(r) && r > 0) ? r : 10;
+}
+
+function renderSmartAlerts() {
+  const host = document.getElementById('smartAlerts');
+  if (!host) return;
+  if (!smartAlertsEnabled()) { host.style.display = 'none'; host.innerHTML = ''; return; }
+
+  const expired = [], near = [], out = [], low = [];
+  invData.forEach(p => {
+    const es = expiryStatus(p.expiry_date);
+    if (es === 'expired') expired.push(p);
+    else if (es === 'near') near.push(p);
+    if (p.qty <= 0) out.push(p);
+    else if (p.qty <= reorderThreshold(p)) low.push(p);
+  });
+
+  host.style.display = 'block';
+
+  if (!expired.length && !near.length && !out.length && !low.length) {
+    host.innerHTML =
+      `<div class="sa-card sa-clear">
+         <span class="sa-clear-ic">✓</span>
+         <div><strong>Walang alerts.</strong> Maayos ang stock at expiry ng lahat ng produkto.</div>
+       </div>`;
+    return;
+  }
+
+  const reorder = out.concat(low);
+  const nameOf = p => esc(p.brand_name || p.generic_name || 'Item') + (p.dosage ? ' ' + esc(p.dosage) : '');
+
+  const chip = (label, n, color) =>
+    `<span class="sa-chip" style="${n > 0 ? `border-color:${color};color:${color};` : 'opacity:.4;'}">${label}: <b>${n}</b></span>`;
+
+  const block = (title, color, items, fmt) => items.length
+    ? `<details class="sa-block"><summary><span class="sa-dot" style="background:${color}"></span>${title} <span class="sa-count">${items.length}</span></summary>
+         <ul class="sa-list">${items.map(fmt).join('')}</ul></details>`
+    : '';
+
+  const expFmt   = p => `<li>${nameOf(p)} <span class="sa-meta">exp ${esc(p.expiry_date || '—')}</span></li>`;
+  const stockFmt = p => `<li>${nameOf(p)} <span class="sa-meta">${p.qty} left · reorder @ ${reorderThreshold(p)}</span></li>`;
+
+  // Plain-text reorder list the owner can paste into a message to the supplier.
+  window._reorderText = reorder.length
+    ? reorder.map(p => `• ${(p.brand_name || p.generic_name || 'Item')}${p.dosage ? ' ' + p.dosage : ''} — ${p.qty} left (order to reach ${reorderThreshold(p)})`).join('\n')
+    : '';
+
+  host.innerHTML =
+    `<div class="sa-card">
+       <div class="sa-head">
+         <strong>⚠️ Smart Alerts</strong>
+         <span class="sa-sub">Auto-bantay sa stock at expiry</span>
+       </div>
+       <div class="sa-chips">
+         ${chip('Expired', expired.length, '#dc2626')}
+         ${chip('Malapit mag-expire', near.length, '#d97706')}
+         ${chip('Out of stock', out.length, '#dc2626')}
+         ${chip('Below reorder', low.length, '#d97706')}
+       </div>
+       ${block('Expired na', '#dc2626', expired, expFmt)}
+       ${block('Malapit nang mag-expire (90 araw)', '#d97706', near, expFmt)}
+       ${block('Out of stock', '#dc2626', out, stockFmt)}
+       ${block('Below reorder level', '#d97706', low, stockFmt)}
+       ${reorder.length ? `<div class="sa-reorder">
+            <div class="sa-reorder-head">
+              <strong>Reorder List (${reorder.length})</strong>
+              <button class="btn btn-secondary btn-sm" onclick="copyReorderList()">Copy list</button>
+            </div>
+            <pre class="sa-reorder-text">${esc(window._reorderText)}</pre>
+          </div>` : ''}
+     </div>`;
+}
+
+function copyReorderList() {
+  const text = window._reorderText || '';
+  if (!text) { toast('Walang item na kailangang i-reorder.', 'info'); return; }
+  const done = () => toast('Na-copy ang reorder list ✓', 'success');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => fallbackCopyText(text, done));
+  } else {
+    fallbackCopyText(text, done);
+  }
+}
+function fallbackCopyText(text, done) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    done();
+  } catch (e) { toast('Hindi ma-copy — i-screenshot na lang ang listahan.', 'error'); }
+}
+window.renderSmartAlerts = renderSmartAlerts;
 
 function openInvModal(id) {
   if (id) {
@@ -2857,6 +3009,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         window.PHARMETRIKS_FEATURES = data.features || {};
         if (window.PHARMETRIKS_SYNC && window.PHARMETRIKS_SYNC.onFeaturesReady) window.PHARMETRIKS_SYNC.onFeaturesReady();
         if (window.applyDiscountVisibility) window.applyDiscountVisibility();
+        if (window.renderSmartAlerts) window.renderSmartAlerts();
         hideOfflineBlock();
       })
       .catch(function (err) {
