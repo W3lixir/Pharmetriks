@@ -969,6 +969,10 @@
     <div class="nav-item" data-tab="insights" id="navInsights" onclick="switchTab('insights')" style="display:none;">
       <svg class="ic"><use href="#i-chart"/></svg> Insights
     </div>
+    <!-- Utang tab (add-on: 'utang_tracker'). Hidden unless entitled. -->
+    <div class="nav-item" data-tab="utang" id="navUtang" onclick="switchTab('utang')" style="display:none;">
+      <svg class="ic"><use href="#i-wallet"/></svg> Utang
+    </div>
   </nav>
 
   <button class="guide-btn" onclick="startTour()" aria-label="Open guided tour">
@@ -1165,6 +1169,40 @@
     .ins-top-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#7c3aed,#c4b5fd); }
     .ins-top-val { flex:0 0 auto; font-size:12px; font-weight:800; color:#1e0a47; font-variant-numeric:tabular-nums; }
     .ins-top-sub { font-weight:600; color:#a78bfa; font-size:11px; }
+
+    /* ── Utang & Suki ── */
+    .suki-row {
+      display:flex; align-items:center; gap:12px; cursor:pointer;
+      background:#fff; border:1px solid #eee7f7; border-radius:12px;
+      padding:11px 14px; margin-bottom:8px; transition:background .12s, border-color .12s;
+    }
+    .suki-row:hover { background:#faf8ff; border-color:#d9c9f5; }
+    .suki-row-main { flex:1; min-width:0; }
+    .suki-row-name { font-size:13.5px; font-weight:800; color:#1e0a47; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .suki-row-sub { font-size:11px; color:#94a3b8; font-weight:500; margin-top:2px; }
+    .suki-row-bal { flex:0 0 auto; font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; }
+    .suki-row-bal.owe { color:#dc2626; }
+    .suki-row-bal.clear { color:#16a34a; }
+    .suki-detail-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
+    .suki-detail-meta { font-size:12px; color:#94a3b8; margin-top:3px; }
+    .suki-detail-bal { text-align:right; flex:0 0 auto; }
+    .suki-bal-val { font-size:20px; font-weight:900; letter-spacing:-0.5px; }
+    .suki-bal-val.owe { color:#dc2626; }
+    .suki-bal-val.clear { color:#16a34a; }
+    .utang-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+    .utang-ledger-label { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#94a3b8; margin-bottom:6px; }
+    .utang-ledger { max-height:300px; overflow:auto; }
+    .ledger-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1edfb; }
+    .ledger-info { flex:1; min-width:0; }
+    .ledger-kind { font-size:12.5px; font-weight:800; }
+    .ledger-kind.charge { color:#dc2626; }
+    .ledger-kind.payment { color:#16a34a; }
+    .ledger-sub { font-size:11px; color:#94a3b8; margin-top:1px; }
+    .ledger-amt { font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; }
+    .ledger-amt.charge { color:#dc2626; }
+    .ledger-amt.payment { color:#16a34a; }
+    .ledger-del { border:none; background:none; cursor:pointer; color:#cbd5e1; font-size:18px; line-height:1; padding:0 4px; }
+    .ledger-del:hover { color:#dc2626; }
   </style>
 
   <!-- ════ INVENTORY ════ -->
@@ -1325,6 +1363,23 @@
     </div>
   </div>
 
+  <!-- ════ UTANG & SUKI (add-on: 'utang_tracker') ════ -->
+  <div id="panel-utang" class="panel">
+    <div class="section-header">
+      <h2>Utang &amp; Suki</h2>
+      <p>Digital listahan ng utang — sino, magkano, kailan nagbayad.</p>
+    </div>
+
+    <div class="stats-row" id="utangKpis"></div>
+
+    <div class="insights-bar">
+      <input type="text" id="sukiSearch" placeholder="Hanapin ang suki…" oninput="renderSukiList()" style="flex:1;min-width:180px;">
+      <button class="btn btn-primary btn-sm" onclick="openSukiModal()"><svg class="ic ic-sm"><use href="#i-plus"/></svg> Add Suki</button>
+    </div>
+
+    <div id="sukiList"></div>
+  </div>
+
   <!-- Mobile-only upgrade CTA -->
   <div class="upgrade-cta mobile-only-cta" style="margin-top:24px;">
     <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
@@ -1476,11 +1531,91 @@
   </div>
 </div>
 
+<!-- ══════════════════════ UTANG: ADD/EDIT SUKI MODAL ══════════════════════ -->
+<div class="modal-overlay" id="sukiModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2 id="sukiModalTitle">Add Suki</h2>
+    <input type="hidden" id="sukiEditId">
+    <div class="form-group">
+      <label>Pangalan *</label>
+      <input type="text" id="sukiName" placeholder="e.g. Aling Nena">
+    </div>
+    <div class="form-group">
+      <label>Numero (optional)</label>
+      <input type="text" id="sukiPhone" placeholder="e.g. 0917…">
+    </div>
+    <div class="form-group">
+      <label>Note (optional)</label>
+      <input type="text" id="sukiNote" placeholder="e.g. kapitbahay, suki sa gamot ng anak">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('sukiModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSuki()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ UTANG: SUKI DETAIL MODAL ══════════════════════ -->
+<div class="modal-overlay" id="sukiDetailModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <input type="hidden" id="detailSukiId">
+    <div class="suki-detail-head">
+      <div>
+        <h2 id="detailSukiName" style="margin:0;">Suki</h2>
+        <div id="detailSukiMeta" class="suki-detail-meta"></div>
+      </div>
+      <div class="suki-detail-bal">
+        <div class="slabel">Balanse</div>
+        <div id="detailSukiBalance" class="suki-bal-val">₱0.00</div>
+      </div>
+    </div>
+
+    <div class="utang-actions">
+      <button class="btn btn-danger btn-sm" onclick="openEntryModal(document.getElementById('detailSukiId').value,'charge')">+ Utang</button>
+      <button class="btn btn-primary btn-sm" onclick="openEntryModal(document.getElementById('detailSukiId').value,'payment')">+ Bayad</button>
+      <button class="btn btn-ghost btn-sm" onclick="openSukiModal(document.getElementById('detailSukiId').value)">Edit profile</button>
+      <button class="btn btn-ghost btn-sm" style="color:#dc2626;" onclick="deleteSuki(document.getElementById('detailSukiId').value)">Delete suki</button>
+    </div>
+
+    <div class="utang-ledger-label">Ledger</div>
+    <div id="sukiLedger" class="utang-ledger"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('sukiDetailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ UTANG: ADD ENTRY MODAL ══════════════════════ -->
+<div class="modal-overlay" id="entryModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+    <h2 id="entryModalTitle">Add Utang</h2>
+    <input type="hidden" id="entrySukiId">
+    <input type="hidden" id="entryKind">
+    <div class="form-group">
+      <label>Halaga (₱) *</label>
+      <input type="number" id="entryAmount" placeholder="0.00" min="0.01" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Petsa</label>
+      <input type="date" id="entryDate" style="width:100%;">
+    </div>
+    <div class="form-group">
+      <label>Note (optional)</label>
+      <input type="text" id="entryNote" placeholder="e.g. gamot, partial payment">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('entryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ══════════════════ STORAGE ══════════════════
-const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses' };
+const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses', suki: 'rxmvp_suki', utang: 'rxmvp_utang' };
 
 function dbLoad(key) {
   try { return JSON.parse(localStorage.getItem(KEYS[key]) || '[]'); } catch { return []; }
@@ -1542,7 +1677,7 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ══════════════════ SIDEBAR NAV ══════════════════
-const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights'];
+const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang'];
 
 function switchTab(name) {
   document.querySelectorAll('.nav-item[data-tab]').forEach(t => {
@@ -1560,6 +1695,7 @@ function switchTab(name) {
   if (name === 'inventory')  { renderInventory(); }
   if (name === 'opex')       { renderOpexStats(); renderSalesLog(); renderExpenses(); }
   if (name === 'insights')   { renderInsights(); }
+  if (name === 'utang')      { renderUtang(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -1933,6 +2069,204 @@ function printInsightsReport() {
   w.focus();
   setTimeout(() => { try { w.print(); } catch (e) {} }, 350);
 }
+
+// ══════════════════ UTANG & SUKI TRACKER (add-on: 'utang_tracker') ══════════════════
+function utangEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('utang_tracker')); }
+
+let sukiData  = dbLoad('suki');
+let utangData = dbLoad('utang');
+
+// Balance = total charges − total payments for a suki.
+function sukiBalance(id) {
+  let bal = 0;
+  for (const e of utangData) {
+    if (e.suki_id !== id) continue;
+    bal += (e.kind === 'payment' ? -1 : 1) * (Number(e.amount) || 0);
+  }
+  return bal;
+}
+function sukiLastActivity(id) {
+  let last = '';
+  for (const e of utangData) { if (e.suki_id === id && e.date > last) last = e.date; }
+  return last;
+}
+
+function handleUtangOverlay(e) { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); }
+function closeUtangModal(idStr) { const el = document.getElementById(idStr); if (el) el.classList.remove('open'); }
+
+// Show/hide the Utang nav based on entitlement; bounce off the tab if revoked.
+function applyUtangVisibility() {
+  const on = utangEnabled();
+  const nav = document.getElementById('navUtang');
+  const mob = document.getElementById('mobtab-utang');
+  if (nav) nav.style.display = on ? '' : 'none';
+  if (mob) mob.style.display = on ? '' : 'none';
+  const panel = document.getElementById('panel-utang');
+  if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
+}
+window.applyUtangVisibility = applyUtangVisibility;
+
+function renderUtang() {
+  if (!utangEnabled()) return;
+  let totalOutstanding = 0, withBalance = 0, paidUp = 0;
+  sukiData.forEach(s => {
+    const b = sukiBalance(s.id);
+    if (b > 0.0001) { totalOutstanding += b; withBalance++; } else paidUp++;
+  });
+  const kpi = document.getElementById('utangKpis');
+  if (kpi) kpi.innerHTML =
+    `<div class="stat-card"><div class="slabel">Kabuuang Utang</div><div class="sval ${totalOutstanding > 0 ? 'red' : ''}">${peso(totalOutstanding)}</div></div>
+     <div class="stat-card"><div class="slabel">May Utang</div><div class="sval ${withBalance > 0 ? 'yellow' : ''}">${withBalance}</div></div>
+     <div class="stat-card"><div class="slabel">Bayad Na</div><div class="sval">${paidUp}</div></div>
+     <div class="stat-card"><div class="slabel">Total Suki</div><div class="sval">${sukiData.length}</div></div>`;
+  renderSukiList();
+}
+
+function renderSukiList() {
+  const host = document.getElementById('sukiList');
+  if (!host) return;
+  const searchEl = document.getElementById('sukiSearch');
+  const q = (searchEl && searchEl.value || '').toLowerCase();
+  let list = sukiData.filter(s => (s.name || '').toLowerCase().includes(q) || (s.phone || '').toLowerCase().includes(q));
+  list = list.map(s => ({ s, bal: sukiBalance(s.id) }))
+             .sort((a, b) => b.bal - a.bal || (a.s.name || '').localeCompare(b.s.name || ''));
+  if (!list.length) {
+    host.innerHTML = `<div class="ins-empty">${sukiData.length ? 'Walang tugmang suki.' : 'Wala pang suki. I-click ang + Add Suki.'}</div>`;
+    return;
+  }
+  host.innerHTML = list.map(({ s, bal }) => {
+    const last = sukiLastActivity(s.id);
+    return `<div class="suki-row" onclick="openSukiDetail('${s.id}')">
+      <div class="suki-row-main">
+        <div class="suki-row-name">${esc(s.name || 'Suki')}</div>
+        <div class="suki-row-sub">${s.phone ? esc(s.phone) + ' · ' : ''}${last ? 'huling galaw ' + esc(last) : 'walang galaw pa'}</div>
+      </div>
+      <div class="suki-row-bal ${bal > 0.0001 ? 'owe' : 'clear'}">${bal > 0.0001 ? peso(bal) : 'Bayad ✓'}</div>
+    </div>`;
+  }).join('');
+}
+
+function openSukiModal(id) {
+  document.getElementById('sukiEditId').value = id || '';
+  const s = id ? sukiData.find(x => x.id === id) : null;
+  document.getElementById('sukiModalTitle').textContent = s ? 'Edit Suki' : 'Add Suki';
+  document.getElementById('sukiName').value  = s ? (s.name || '')  : '';
+  document.getElementById('sukiPhone').value = s ? (s.phone || '') : '';
+  document.getElementById('sukiNote').value  = s ? (s.note || '')  : '';
+  document.getElementById('sukiModal').classList.add('open');
+  setTimeout(() => document.getElementById('sukiName').focus(), 80);
+}
+
+function saveSuki() {
+  const id = document.getElementById('sukiEditId').value;
+  const name = document.getElementById('sukiName').value.trim();
+  if (!name) { toast('Pangalan ay kailangan.', 'error'); return; }
+  const phone = document.getElementById('sukiPhone').value.trim();
+  const note  = document.getElementById('sukiNote').value.trim();
+  const nowISO = new Date().toISOString();
+  if (id) {
+    const s = sukiData.find(x => x.id === id);
+    if (s) { s.name = name; s.phone = phone; s.note = note; s.updated_at = nowISO; }
+  } else {
+    sukiData.push({ id: uid(), name, phone, note, created_at: nowISO, updated_at: nowISO });
+  }
+  dbSave('suki', sukiData);
+  closeUtangModal('sukiModal');
+  renderUtang();
+  if (id && document.getElementById('sukiDetailModal').classList.contains('open')) openSukiDetail(id);
+  toast(id ? 'Na-update ang suki.' : 'Naidagdag ang suki.');
+}
+
+function deleteSuki(id) {
+  const s = sukiData.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`Burahin si "${s.name}" at lahat ng utang record niya?`)) return;
+  const entries = utangData.filter(e => e.suki_id === id);
+  if (window.PHARMETRIKS_SYNC) {
+    window.PHARMETRIKS_SYNC.markDeleted('suki', id);
+    entries.forEach(e => window.PHARMETRIKS_SYNC.markDeleted('utang', e.id));
+  }
+  sukiData  = sukiData.filter(x => x.id !== id);
+  utangData = utangData.filter(e => e.suki_id !== id);
+  dbSave('suki', sukiData);
+  dbSave('utang', utangData);
+  closeUtangModal('sukiDetailModal');
+  renderUtang();
+  toast('Nabura ang suki.');
+}
+
+function openSukiDetail(id) {
+  const s = sukiData.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('detailSukiId').value = id;
+  document.getElementById('detailSukiName').textContent = s.name || 'Suki';
+  document.getElementById('detailSukiMeta').textContent = [s.phone, s.note].filter(Boolean).map(esc).join(' · ');
+  const bal = sukiBalance(id);
+  const balEl = document.getElementById('detailSukiBalance');
+  balEl.textContent = bal > 0.0001 ? peso(bal) : (bal < -0.0001 ? peso(-bal) + ' (sobra)' : 'Bayad ✓');
+  balEl.className = 'suki-bal-val ' + (bal > 0.0001 ? 'owe' : 'clear');
+  renderSukiLedger(id);
+  document.getElementById('sukiDetailModal').classList.add('open');
+}
+
+function renderSukiLedger(id) {
+  const host = document.getElementById('sukiLedger');
+  const entries = utangData.filter(e => e.suki_id === id)
+    .sort((a, b) => (b.date + (b.created_at || '')).localeCompare(a.date + (a.created_at || '')));
+  if (!entries.length) { host.innerHTML = '<div class="ins-empty">Wala pang record.</div>'; return; }
+  host.innerHTML = entries.map(e => {
+    const charge = e.kind !== 'payment';
+    return `<div class="ledger-row">
+      <div class="ledger-info">
+        <div class="ledger-kind ${charge ? 'charge' : 'payment'}">${charge ? 'Utang' : 'Bayad'}</div>
+        <div class="ledger-sub">${esc(e.date)}${e.note ? ' · ' + esc(e.note) : ''}</div>
+      </div>
+      <div class="ledger-amt ${charge ? 'charge' : 'payment'}">${charge ? '+' : '−'}${peso(e.amount)}</div>
+      <button class="ledger-del" title="Burahin" onclick="deleteEntry('${e.id}')">×</button>
+    </div>`;
+  }).join('');
+}
+
+function openEntryModal(sukiId, kind) {
+  if (!sukiId) return;
+  document.getElementById('entrySukiId').value = sukiId;
+  document.getElementById('entryKind').value = kind;
+  document.getElementById('entryModalTitle').textContent = kind === 'payment' ? 'Add Bayad' : 'Add Utang';
+  document.getElementById('entryAmount').value = '';
+  document.getElementById('entryDate').value = today();
+  document.getElementById('entryNote').value = '';
+  document.getElementById('entryModal').classList.add('open');
+  setTimeout(() => document.getElementById('entryAmount').focus(), 80);
+}
+
+function saveEntry() {
+  const sukiId = document.getElementById('entrySukiId').value;
+  const kind = document.getElementById('entryKind').value === 'payment' ? 'payment' : 'charge';
+  const amount = parseFloat(document.getElementById('entryAmount').value);
+  if (!sukiId || !sukiData.find(x => x.id === sukiId)) { toast('Walang suki.', 'error'); return; }
+  if (!(amount > 0)) { toast('Maglagay ng tamang halaga.', 'error'); return; }
+  const date = document.getElementById('entryDate').value || today();
+  const note = document.getElementById('entryNote').value.trim();
+  const nowISO = new Date().toISOString();
+  utangData.push({ id: uid(), suki_id: sukiId, kind, amount, date, note, created_at: nowISO, updated_at: nowISO });
+  dbSave('utang', utangData);
+  closeUtangModal('entryModal');
+  openSukiDetail(sukiId);
+  renderUtang();
+  toast(kind === 'payment' ? 'Naitala ang bayad.' : 'Naitala ang utang.');
+}
+
+function deleteEntry(id) {
+  const e = utangData.find(x => x.id === id);
+  if (!e) return;
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('utang', id);
+  utangData = utangData.filter(x => x.id !== id);
+  dbSave('utang', utangData);
+  if (document.getElementById('sukiDetailModal').classList.contains('open')) openSukiDetail(e.suki_id);
+  renderUtang();
+  toast('Nabura ang record.');
+}
+window.renderUtang = renderUtang;
 
 function openInvModal(id) {
   if (id) {
@@ -2627,6 +2961,12 @@ window.PHARMETRIKS_APPLY = function (key, arr) {
     expData = arr;
     if (typeof renderExpenses === 'function') renderExpenses();
     if (typeof renderOpexStats === 'function') renderOpexStats();
+  } else if (key === 'suki') {
+    sukiData = arr;
+    if (typeof renderUtang === 'function') renderUtang();
+  } else if (key === 'utang') {
+    utangData = arr;
+    if (typeof renderUtang === 'function') renderUtang();
   }
 };
 
@@ -2753,6 +3093,7 @@ renderOpexStats();
 renderSalesLog();
 renderExpenses();
 applyInsightsVisibility();  // reveal the Insights tab if cached features include it
+applyUtangVisibility();      // reveal the Utang tab if cached features include it
 
 // ══════════════════ GUIDED TOUR (spotlight) ══════════════════
 const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
@@ -3258,6 +3599,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.applyDiscountVisibility) window.applyDiscountVisibility();
         if (window.renderSmartAlerts) window.renderSmartAlerts();
         if (window.applyInsightsVisibility) window.applyInsightsVisibility();
+        if (window.applyUtangVisibility) window.applyUtangVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -3304,6 +3646,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   try {
     if (window.applyDiscountVisibility) window.applyDiscountVisibility();
     if (window.applyInsightsVisibility) window.applyInsightsVisibility();
+    if (window.applyUtangVisibility) window.applyUtangVisibility();
     if (window.renderSmartAlerts) window.renderSmartAlerts();
   } catch (e) {}
 
@@ -3324,9 +3667,9 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
  * with tombstones so deletes propagate; per-collection version for optimistic
  * concurrency. Reuses window.dbLoad/dbSave and window.PHARMETRIKS_APPLY. */
 (function () {
-  var COLLECTIONS = ['inv', 'sales', 'exp'];
+  var COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang'];
   var TOMB_KEY = 'rxmvp_tombstones';
-  var versions = { inv: 0, sales: 0, exp: 0 };
+  var versions = { inv: 0, sales: 0, exp: 0, suki: 0, utang: 0 };
   var timers = {};
   var didInitialPull = false;
 
@@ -3538,6 +3881,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   <div class="mob-tab" id="mobtab-insights" onclick="switchTab('insights')" style="display:none;">
     <svg class="ic mob-tab-icon"><use href="#i-chart"/></svg>
     <span>Insights</span>
+  </div>
+  <div class="mob-tab" id="mobtab-utang" onclick="switchTab('utang')" style="display:none;">
+    <svg class="ic mob-tab-icon"><use href="#i-wallet"/></svg>
+    <span>Utang</span>
   </div>
 </nav>
 

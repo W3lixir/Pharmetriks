@@ -19,7 +19,7 @@ import { hasFeature, type FeatureMap } from '@/lib/features';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COLLECTIONS = ['inv', 'sales', 'exp'] as const;
+const COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang'] as const;
 type Collection = (typeof COLLECTIONS)[number];
 
 type Authed =
