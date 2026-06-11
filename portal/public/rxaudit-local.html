@@ -1231,6 +1231,31 @@
     .pl-brand { color:#7c3aed; font-weight:600; }
     .pl-dose { color:#94a3b8; }
     .pl-price { flex:0 0 auto; font-size:13px; font-weight:800; color:#1e0a47; font-variant-numeric:tabular-nums; }
+
+    /* ── Pricing Advisor ── */
+    .pricing-calc { background:#faf8ff; border:1px solid #eee7f7; border-radius:12px; padding:12px 14px; }
+    .calc-result { font-size:13px; color:#1e0a47; margin-top:4px; }
+    .calc-result b { color:#7c3aed; }
+    .pricing-body { max-height:42vh; overflow:auto; }
+    .pa-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid #f1edfb; }
+    .pa-name { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:#1e0a47; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pa-nums { flex:0 0 auto; font-size:11.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
+    .pa-flag { flex:0 0 auto; font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; }
+    .pa-flag.ok { background:#dcfce7; color:#16a34a; }
+    .pa-flag.thin { background:#fee2e2; color:#dc2626; }
+    .pa-flag.none { background:#f1f5f9; color:#94a3b8; }
+
+    /* ── Stock Audit ── */
+    .audit-bar { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .audit-summary { flex:0 0 auto; font-size:11.5px; font-weight:700; color:#7c3aed; }
+    .audit-body { max-height:50vh; overflow:auto; }
+    .audit-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #f1edfb; }
+    .audit-name { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:#1e0a47; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .audit-sys { flex:0 0 auto; font-size:11px; color:#94a3b8; }
+    .audit-input { flex:0 0 auto; width:70px; }
+    .audit-diff { flex:0 0 auto; font-size:12px; font-weight:800; min-width:34px; text-align:right; }
+    .audit-diff.neg { color:#dc2626; }
+    .audit-diff.pos { color:#16a34a; }
   </style>
 
   <!-- ════ INVENTORY ════ -->
@@ -1255,6 +1280,10 @@
         <button class="btn btn-secondary btn-sm" onclick="exportInventoryCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
         <!-- Price List (add-on: 'price_list'). Hidden unless entitled. -->
         <button class="btn btn-secondary btn-sm" id="priceListBtn" onclick="openPriceList()" style="display:none;"><svg class="ic ic-sm"><use href="#i-receipt"/></svg> Price List</button>
+        <!-- Pricing Advisor (add-on: 'pricing_advisor'). Hidden unless entitled. -->
+        <button class="btn btn-secondary btn-sm" id="pricingBtn" onclick="openPricing()" style="display:none;"><svg class="ic ic-sm"><use href="#i-chart"/></svg> Pricing</button>
+        <!-- Stock Audit (add-on: 'stock_audit'). Hidden unless entitled. -->
+        <button class="btn btn-secondary btn-sm" id="auditBtn" onclick="openAudit()" style="display:none;"><svg class="ic ic-sm"><use href="#i-check-circle"/></svg> Stock Audit</button>
       </div>
     </div>
 
@@ -1686,6 +1715,48 @@
     <div id="priceListBody" class="pricelist-body"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeUtangModal('priceListModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MARGIN & PRICING ADVISOR MODAL ══════════════════════ -->
+<div class="modal-overlay" id="pricingModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;">
+    <h2 style="margin:0 0 4px;">Margin &amp; Pricing Advisor</h2>
+    <p style="font-size:12px;color:#94a3b8;margin:0 0 14px;">Markup calculator + per-product margin. Fina-flag ang manipis ang kita.</p>
+
+    <div class="pricing-calc">
+      <div class="form-row">
+        <div class="form-group"><label>Puhunan / Cost (₱)</label><input type="number" id="calcCost" min="0" step="0.01" placeholder="0.00" oninput="calcMarkup()"></div>
+        <div class="form-group"><label>Target Margin (%)</label><input type="number" id="calcMargin" min="0" max="99" step="0.1" placeholder="e.g. 25" oninput="calcMarkup()"></div>
+      </div>
+      <div id="calcResult" class="calc-result">Maglagay ng cost at target margin para makita ang suggested SRP.</div>
+    </div>
+
+    <div class="utang-ledger-label" style="margin-top:16px;">Per-product margin</div>
+    <input type="text" id="pricingSearch" placeholder="Hanapin ang produkto…" oninput="renderPricingTable()" style="width:100%;margin-bottom:8px;">
+    <div id="pricingBody" class="pricing-body"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('pricingModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ STOCK AUDIT MODAL ══════════════════════ -->
+<div class="modal-overlay" id="auditModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;">
+    <h2 style="margin:0 0 4px;">Stock Audit</h2>
+    <p style="font-size:12px;color:#94a3b8;margin:0 0 12px;">Bilangin ang aktwal na stock, ilagay dito, ikukumpara sa system.</p>
+    <div class="audit-bar">
+      <input type="text" id="auditSearch" placeholder="Hanapin ang produkto…" oninput="renderAuditList()" style="flex:1;">
+      <span id="auditSummary" class="audit-summary"></span>
+    </div>
+    <div id="auditBody" class="audit-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('auditModal')">Close</button>
+      <button class="btn btn-secondary btn-sm" onclick="printAudit()">Variance Report</button>
+      <button class="btn btn-primary btn-sm" onclick="applyAudit()">Apply Adjustments</button>
     </div>
   </div>
 </div>
@@ -2536,6 +2607,167 @@ function printPriceList() {
   openPrintWindow('Pharmetriks — Price List', `<h1>Price List</h1><div class="sub">${esc(today())}</div>${rows || '<div>Walang produkto.</div>'}`);
 }
 
+// ══════════════════ MARGIN & PRICING ADVISOR (add-on: 'pricing_advisor') ══════════════════
+function pricingEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('pricing_advisor')); }
+function applyPricingVisibility() { const b = document.getElementById('pricingBtn'); if (b) b.style.display = pricingEnabled() ? '' : 'none'; }
+window.applyPricingVisibility = applyPricingVisibility;
+
+const THIN_MARGIN = 15; // % below which a product's margin is flagged "manipis"
+
+function openPricing() {
+  if (!pricingEnabled()) return;
+  document.getElementById('calcCost').value = '';
+  document.getElementById('calcMargin').value = '';
+  calcMarkup();
+  const s = document.getElementById('pricingSearch'); if (s) s.value = '';
+  renderPricingTable();
+  document.getElementById('pricingModal').classList.add('open');
+}
+
+function calcMarkup() {
+  const cost = parseFloat(document.getElementById('calcCost').value);
+  const margin = parseFloat(document.getElementById('calcMargin').value);
+  const res = document.getElementById('calcResult');
+  if (!(cost > 0) || !(margin >= 0) || margin >= 100) {
+    res.innerHTML = 'Maglagay ng cost at target margin para makita ang suggested SRP.';
+    return;
+  }
+  const srp = cost / (1 - margin / 100);
+  const markup = (srp - cost) / cost * 100;
+  res.innerHTML = `Suggested SRP: <b>${peso(srp)}</b> · Markup: <b>${markup.toFixed(1)}%</b> · Kita/piraso: <b>${peso(srp - cost)}</b>`;
+}
+
+function renderPricingTable() {
+  const host = document.getElementById('pricingBody');
+  if (!host) return;
+  const s = document.getElementById('pricingSearch');
+  const q = (s && s.value || '').toLowerCase();
+  const rows = (invData || [])
+    .filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)))
+    .map(p => {
+      const price = Number(p.price) || 0, cost = Number(p.cost) || 0;
+      const hasCost = cost > 0;
+      return { p, price, cost, hasCost, margin: (hasCost && price > 0) ? (price - cost) / price * 100 : null };
+    })
+    .sort((a, b) => (a.margin === null) - (b.margin === null) || ((a.margin || 0) - (b.margin || 0)));
+  if (!rows.length) { host.innerHTML = '<div class="ins-empty">Walang produkto.</div>'; return; }
+  host.innerHTML = rows.map(({ p, price, cost, hasCost, margin }) => {
+    const name = esc(p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + esc(p.dosage) : '');
+    let badge;
+    if (!hasCost) badge = '<span class="pa-flag none">walang cost</span>';
+    else if (margin < THIN_MARGIN) badge = `<span class="pa-flag thin">${margin.toFixed(0)}% manipis</span>`;
+    else badge = `<span class="pa-flag ok">${margin.toFixed(0)}%</span>`;
+    return `<div class="pa-row">
+      <div class="pa-name">${name}</div>
+      <div class="pa-nums">${hasCost ? 'C ' + peso(cost) + ' · ' : ''}S ${peso(price)}</div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════ STOCK AUDIT MODE (add-on: 'stock_audit') ══════════════════
+function auditEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('stock_audit')); }
+function applyAuditVisibility() { const b = document.getElementById('auditBtn'); if (b) b.style.display = auditEnabled() ? '' : 'none'; }
+window.applyAuditVisibility = applyAuditVisibility;
+
+let auditCounts = {}; // product_id -> actual qty entered (transient, not synced)
+
+function openAudit() {
+  if (!auditEnabled()) return;
+  auditCounts = {};
+  const s = document.getElementById('auditSearch'); if (s) s.value = '';
+  renderAuditList();
+  document.getElementById('auditModal').classList.add('open');
+}
+
+function setAuditCount(id, val) {
+  if (val === '' || val == null) delete auditCounts[id]; else auditCounts[id] = val;
+  updateAuditSummary();
+}
+
+function auditVariances() {
+  const out = [];
+  (invData || []).forEach(p => {
+    if (!(p.id in auditCounts)) return;
+    const actual = parseInt(auditCounts[p.id]);
+    if (isNaN(actual)) return;
+    const sys = Number(p.qty) || 0;
+    if (actual !== sys) out.push({ p, sys, actual, diff: actual - sys });
+  });
+  return out;
+}
+
+function updateAuditSummary() {
+  const el = document.getElementById('auditSummary');
+  if (!el) return;
+  const counted = Object.keys(auditCounts).filter(k => auditCounts[k] !== '').length;
+  el.textContent = `${counted} nabilang · ${auditVariances().length} may diperensya`;
+}
+
+function renderAuditList() {
+  const host = document.getElementById('auditBody');
+  if (!host) return;
+  const s = document.getElementById('auditSearch');
+  const q = (s && s.value || '').toLowerCase();
+  const items = (invData || []).filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)));
+  if (!items.length) { host.innerHTML = '<div class="ins-empty">Walang produkto.</div>'; return; }
+  host.innerHTML = items.map(p => {
+    const name = esc(p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + esc(p.dosage) : '');
+    const val = (p.id in auditCounts) ? auditCounts[p.id] : '';
+    const sys = Number(p.qty) || 0;
+    const actual = parseInt(val);
+    let diffHtml = '';
+    if (!isNaN(actual) && actual !== sys) {
+      const diff = actual - sys;
+      diffHtml = `<span class="audit-diff ${diff < 0 ? 'neg' : 'pos'}">${diff > 0 ? '+' : ''}${diff}</span>`;
+    }
+    return `<div class="audit-row">
+      <div class="audit-name">${name}</div>
+      <div class="audit-sys">sys: ${sys}</div>
+      <input type="number" class="audit-input" min="0" value="${esc(String(val))}" placeholder="—" oninput="setAuditCount('${p.id}', this.value); refreshAuditRow(this, ${sys})">
+      ${diffHtml}
+    </div>`;
+  }).join('');
+  updateAuditSummary();
+}
+
+// Update one row's diff badge without re-rendering (keeps input focus).
+function refreshAuditRow(input, sys) {
+  const row = input.closest('.audit-row');
+  if (!row) return;
+  let badge = row.querySelector('.audit-diff');
+  const actual = parseInt(input.value);
+  if (isNaN(actual) || actual === sys) { if (badge) badge.remove(); return; }
+  const diff = actual - sys;
+  if (!badge) { badge = document.createElement('span'); row.appendChild(badge); }
+  badge.className = 'audit-diff ' + (diff < 0 ? 'neg' : 'pos');
+  badge.textContent = (diff > 0 ? '+' : '') + diff;
+}
+
+function applyAudit() {
+  const v = auditVariances();
+  if (!v.length) { toast('Walang diperensyang i-aapply.', 'info'); return; }
+  if (!confirm(`I-aayos ang system qty ng ${v.length} produkto base sa nabilang?`)) return;
+  v.forEach(({ p, actual }) => {
+    const prod = invData.find(x => x.id === p.id);
+    if (prod) { prod.qty = actual; prod.updated_at = new Date().toISOString(); }
+  });
+  dbSave('inv', invData);
+  renderInventory();
+  renderProductList();
+  renderAuditList();
+  toast(`Na-update ang ${v.length} produkto.`);
+}
+
+function printAudit() {
+  const v = auditVariances();
+  const rows = v.map(({ p, sys, actual, diff }) => {
+    const name = esc(p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + esc(p.dosage) : '');
+    return `<div class="row"><span>${name}</span><b class="${diff < 0 ? 'neg' : 'pos'}">sys ${sys} → ${actual} (${diff > 0 ? '+' : ''}${diff})</b></div>`;
+  }).join('');
+  openPrintWindow('Pharmetriks — Stock Audit Variance', `<h1>Stock Audit Variance</h1><div class="sub">${esc(today())}</div>${rows || '<div>Walang diperensya — tugma lahat.</div>'}`);
+}
+
 function openInvModal(id) {
   if (id) {
     const p = invData.find(x => x.id === id);
@@ -3364,6 +3596,8 @@ applyInsightsVisibility();  // reveal the Insights tab if cached features includ
 applyUtangVisibility();      // reveal the Utang tab if cached features include it
 applyReportsVisibility();    // reveal the Reports tab if cached features include it
 applyPriceListVisibility();  // reveal the Price List button if cached features include it
+applyPricingVisibility();    // reveal the Pricing button if cached features include it
+applyAuditVisibility();      // reveal the Stock Audit button if cached features include it
 
 // ══════════════════ GUIDED TOUR (spotlight) ══════════════════
 const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
@@ -3872,6 +4106,8 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.applyUtangVisibility) window.applyUtangVisibility();
         if (window.applyReportsVisibility) window.applyReportsVisibility();
         if (window.applyPriceListVisibility) window.applyPriceListVisibility();
+        if (window.applyPricingVisibility) window.applyPricingVisibility();
+        if (window.applyAuditVisibility) window.applyAuditVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -3921,6 +4157,8 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     if (window.applyUtangVisibility) window.applyUtangVisibility();
     if (window.applyReportsVisibility) window.applyReportsVisibility();
     if (window.applyPriceListVisibility) window.applyPriceListVisibility();
+    if (window.applyPricingVisibility) window.applyPricingVisibility();
+    if (window.applyAuditVisibility) window.applyAuditVisibility();
     if (window.renderSmartAlerts) window.renderSmartAlerts();
   } catch (e) {}
 
