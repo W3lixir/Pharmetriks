@@ -1275,6 +1275,22 @@
     .po-item-qty { flex:0 0 auto; font-size:12px; color:#64748b; font-variant-numeric:tabular-nums; }
     .po-empty { color:#94a3b8; font-size:12.5px; padding:10px 0; }
     .po-total { text-align:right; font-weight:800; color:#1e0a47; font-size:13px; margin-top:8px; }
+
+    /* ── Vale & Sahod ── */
+    .vale-check {
+      display:flex; align-items:center; gap:8px; cursor:pointer;
+      font-size:12px; color:#4c1d95; font-weight:600; margin:4px 0 6px;
+    }
+    .vale-check input { width:auto; }
+
+    /* ── Bodega Stock ── */
+    .bodega-tag {
+      display:inline-block; margin-left:6px; font-size:10.5px; font-weight:800;
+      color:#0a8a3f; background:#dcfce7; padding:1px 7px; border-radius:999px;
+      font-variant-numeric:tabular-nums; vertical-align:middle;
+    }
+    .bodega-counts { flex:0 0 auto; display:flex; gap:10px; font-size:11.5px; color:#64748b; font-variant-numeric:tabular-nums; }
+    .bodega-counts b { color:#1e0a47; }
   </style>
 
   <!-- ════ INVENTORY ════ -->
@@ -1303,6 +1319,8 @@
         <button class="btn btn-secondary btn-sm" id="pricingBtn" onclick="openPricing()" style="display:none;"><svg class="ic ic-sm"><use href="#i-chart"/></svg> Pricing</button>
         <!-- Stock Audit (add-on: 'stock_audit'). Hidden unless entitled. -->
         <button class="btn btn-secondary btn-sm" id="auditBtn" onclick="openAudit()" style="display:none;"><svg class="ic ic-sm"><use href="#i-check-circle"/></svg> Stock Audit</button>
+        <!-- Bodega Stock (add-on: 'bodega_stock'). Hidden unless entitled. -->
+        <button class="btn btn-secondary btn-sm" id="bodegaBtn" onclick="openBodega()" style="display:none;"><svg class="ic ic-sm"><use href="#i-inventory"/></svg> Bodega</button>
       </div>
     </div>
 
@@ -1362,7 +1380,11 @@
         <!-- Expense Log -->
         <div class="toolbar">
           <strong style="font-size:15px;color:#1e0a47;">Expense Log</strong>
-          <button class="btn btn-secondary btn-sm" onclick="exportExpensesCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+          <div style="display:flex;gap:8px;">
+            <!-- Vale & Sahod (add-on: 'vale_sahod'). Hidden unless entitled. -->
+            <button class="btn btn-secondary btn-sm" id="valeBtn" onclick="openVale()" style="display:none;"><svg class="ic ic-sm"><use href="#i-wallet"/></svg> Vale &amp; Sahod</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportExpensesCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -1566,6 +1588,13 @@
       <div class="form-group">
         <label>Reorder Level</label>
         <input type="number" id="invReorder" placeholder="e.g. 10" min="0">
+      </div>
+    </div>
+    <!-- Bodega qty (add-on: 'bodega_stock'). Hidden unless entitled. -->
+    <div class="form-row" id="bodegaField" style="display:none;">
+      <div class="form-group">
+        <label>Nasa Bodega (qty)</label>
+        <input type="number" id="invBodega" placeholder="0" min="0">
       </div>
     </div>
     <div class="form-row">
@@ -1859,11 +1888,123 @@
   </div>
 </div>
 
+<!-- ══════════════════════ VALE & SAHOD: MAIN MODAL ══════════════════════ -->
+<div class="modal-overlay" id="valeModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div class="suki-detail-head">
+      <div>
+        <h2 style="margin:0;">Vale &amp; Sahod</h2>
+        <div class="suki-detail-meta">Vale ng bawat helper — auto-bawas sa sahod.</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openStaffModal()">+ Add Staff</button>
+    </div>
+    <div class="stats-row" id="valeKpis"></div>
+    <div id="staffList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('valeModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ VALE & SAHOD: ADD/EDIT STAFF MODAL ══════════════════════ -->
+<div class="modal-overlay" id="staffModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+    <h2 id="staffModalTitle">Add Staff</h2>
+    <input type="hidden" id="staffEditId">
+    <div class="form-group"><label>Pangalan *</label><input type="text" id="staffName" placeholder="e.g. Jen"></div>
+    <div class="form-group"><label>Sahod kada suweldo (₱, optional)</label><input type="number" id="staffRate" min="0" step="0.01" placeholder="e.g. 2500"></div>
+    <div class="form-group"><label>Note (optional)</label><input type="text" id="staffNote" placeholder="e.g. half-day tuwing Sabado"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="staffDeleteBtn" style="color:#dc2626;display:none;" onclick="deleteStaff(document.getElementById('staffEditId').value)">Delete</button>
+      <button class="btn btn-ghost" onclick="closeUtangModal('staffModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStaff()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ VALE & SAHOD: STAFF DETAIL MODAL ══════════════════════ -->
+<div class="modal-overlay" id="staffDetailModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <input type="hidden" id="detailStaffId">
+    <div class="suki-detail-head">
+      <div>
+        <h2 id="detailStaffName" style="margin:0;">Staff</h2>
+        <div id="detailStaffMeta" class="suki-detail-meta"></div>
+      </div>
+      <div class="suki-detail-bal">
+        <div class="slabel">Vale Balance</div>
+        <div id="detailStaffBalance" class="suki-bal-val">₱0.00</div>
+      </div>
+    </div>
+    <div class="utang-actions">
+      <button class="btn btn-danger btn-sm" onclick="openValeEntryModal(document.getElementById('detailStaffId').value)">+ Vale</button>
+      <button class="btn btn-primary btn-sm" onclick="openSahodModal(document.getElementById('detailStaffId').value)">Bayaran (Sahod)</button>
+      <button class="btn btn-ghost btn-sm" onclick="openStaffModal(document.getElementById('detailStaffId').value)">Edit</button>
+    </div>
+    <div class="utang-ledger-label">Ledger</div>
+    <div id="staffLedger" class="utang-ledger"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('staffDetailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ VALE & SAHOD: ADD VALE MODAL ══════════════════════ -->
+<div class="modal-overlay" id="valeEntryModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">
+    <h2 style="margin:0 0 10px;">Add Vale</h2>
+    <input type="hidden" id="valeEntryStaffId">
+    <div class="form-group"><label>Halaga (₱) *</label><input type="number" id="valeAmount" min="0.01" step="0.01" placeholder="0.00"></div>
+    <div class="form-group"><label>Petsa</label><input type="date" id="valeDate" style="width:100%;"></div>
+    <div class="form-group"><label>Note (optional)</label><input type="text" id="valeNote" placeholder="e.g. pamasahe, baon"></div>
+    <label class="vale-check"><input type="checkbox" id="valeLogExpense" checked> I-log din sa Expenses (lumabas ang cash sa kaha)</label>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('valeEntryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveValeEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ VALE & SAHOD: SAHOD SETTLE MODAL ══════════════════════ -->
+<div class="modal-overlay" id="sahodModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+    <h2 style="margin:0 0 4px;">Bayaran ang Sahod</h2>
+    <div id="sahodStaffLabel" class="suki-detail-meta" style="margin-bottom:12px;"></div>
+    <input type="hidden" id="sahodStaffId">
+    <div class="form-row">
+      <div class="form-group"><label>Sahod (gross, ₱) *</label><input type="number" id="sahodGross" min="0.01" step="0.01" placeholder="0.00" oninput="updateSahodComputation()"></div>
+      <div class="form-group"><label>Ibabawas na vale (₱)</label><input type="number" id="sahodDeduct" min="0" step="0.01" placeholder="0.00" oninput="updateSahodComputation()"></div>
+    </div>
+    <div id="sahodComputation" class="calc-result" style="margin-bottom:10px;">—</div>
+    <label class="vale-check"><input type="checkbox" id="sahodLogExpense" checked> I-log ang net sahod sa Expenses (category: Salary)</label>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('sahodModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="settleSahod()">I-record ang Sahod</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ BODEGA STOCK MODAL ══════════════════════ -->
+<div class="modal-overlay" id="bodegaModal" onclick="handleUtangOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;">
+    <h2 style="margin:0 0 4px;">Bodega Stock</h2>
+    <p style="font-size:12px;color:#94a3b8;margin:0 0 12px;">Hiwalay ang nasa estante (nabibili) at nasa bodega (nakatago). Ilipat gamit ang qty + arrow.</p>
+    <div class="audit-bar">
+      <input type="text" id="bodegaSearch" placeholder="Hanapin ang produkto…" oninput="renderBodegaList()" style="flex:1;">
+      <span id="bodegaSummary" class="audit-summary"></span>
+    </div>
+    <div id="bodegaBody" class="audit-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUtangModal('bodegaModal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ══════════════════ STORAGE ══════════════════
-const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses', suki: 'rxmvp_suki', utang: 'rxmvp_utang', suppliers: 'rxmvp_suppliers', po: 'rxmvp_po' };
+const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses', suki: 'rxmvp_suki', utang: 'rxmvp_utang', suppliers: 'rxmvp_suppliers', po: 'rxmvp_po', staff: 'rxmvp_staff', vale: 'rxmvp_vale' };
 
 function dbLoad(key) {
   try { return JSON.parse(localStorage.getItem(KEYS[key]) || '[]'); } catch { return []; }
@@ -1997,7 +2138,7 @@ function renderInventory() {
         <td style="color:#7c3aed;">${esc(p.brand_name)}</td>
         <td style="color:#64748b;">${esc(p.dosage || 'N/A')}</td>
         <td style="color:#64748b;">${esc(p.category || '—')}</td>
-        <td class="text-right"><span class="badge ${qtyBadge} font-mono">${p.qty}</span></td>
+        <td class="text-right"><span class="badge ${qtyBadge} font-mono">${p.qty}</span>${(typeof bodegaEnabled === 'function' && bodegaEnabled() && (Number(p.bodega_qty) || 0) > 0) ? `<span class="bodega-tag" title="Nasa bodega">+${p.bodega_qty}</span>` : ''}</td>
         <td class="text-right font-mono" style="color:#1e0a47;font-weight:600;">${peso(p.price)}</td>
         <td class="text-right font-mono" style="color:#a78bfa;">${p.cost ? peso(p.cost) : '—'}</td>
         <td class="font-mono" style="color:#94a3b8;">${p.expiry_date || '—'}</td>
@@ -2076,7 +2217,10 @@ function renderSmartAlerts() {
     : '';
 
   const expFmt   = p => `<li>${nameOf(p)} <span class="sa-meta">exp ${esc(p.expiry_date || '—')}</span></li>`;
-  const stockFmt = p => `<li>${nameOf(p)} <span class="sa-meta">${p.qty} left · reorder @ ${reorderThreshold(p)}</span></li>`;
+  const stockFmt = p => {
+    const inBodega = (typeof bodegaEnabled === 'function' && bodegaEnabled()) ? (Number(p.bodega_qty) || 0) : 0;
+    return `<li>${nameOf(p)} <span class="sa-meta">${p.qty} left · reorder @ ${reorderThreshold(p)}${inBodega > 0 ? ` · <b style="color:#0a8a3f">kunin sa bodega (${inBodega} pcs)</b>` : ''}</span></li>`;
+  };
 
   // Plain-text reorder list the owner can paste into a message to the supplier.
   window._reorderText = reorder.length
@@ -3083,6 +3227,307 @@ function deletePo(id) {
 }
 window.renderSuppliers = renderSuppliers;
 
+// ══════════════════ VALE & SAHOD NG STAFF (add-on: 'vale_sahod') ══════════════════
+function valeEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('vale_sahod')); }
+function applyValeVisibility() { const b = document.getElementById('valeBtn'); if (b) b.style.display = valeEnabled() ? '' : 'none'; }
+window.applyValeVisibility = applyValeVisibility;
+
+let staffData = dbLoad('staff');
+let valeData  = dbLoad('vale');
+
+// Outstanding vale = total vale given − total deducted at sahod.
+function staffBalance(id) {
+  let bal = 0;
+  for (const e of valeData) {
+    if (e.staff_id !== id) continue;
+    bal += (e.kind === 'bawas' ? -1 : 1) * (Number(e.amount) || 0);
+  }
+  return bal;
+}
+
+function renderVale() {
+  if (!valeEnabled()) return;
+  let totalVale = 0, withVale = 0;
+  staffData.forEach(s => { const b = staffBalance(s.id); if (b > 0.0001) { totalVale += b; withVale++; } });
+  const kpi = document.getElementById('valeKpis');
+  if (kpi) kpi.innerHTML =
+    `<div class="stat-card"><div class="slabel">Kabuuang Vale</div><div class="sval ${totalVale > 0 ? 'red' : ''}">${peso(totalVale)}</div></div>
+     <div class="stat-card"><div class="slabel">May Vale</div><div class="sval ${withVale > 0 ? 'yellow' : ''}">${withVale}</div></div>
+     <div class="stat-card"><div class="slabel">Staff</div><div class="sval">${staffData.length}</div></div>`;
+  const host = document.getElementById('staffList');
+  if (!host) return;
+  if (!staffData.length) { host.innerHTML = '<div class="ins-empty">Wala pang staff. I-click ang + Add Staff.</div>'; return; }
+  host.innerHTML = staffData.slice()
+    .map(s => ({ s, bal: staffBalance(s.id) }))
+    .sort((a, b) => b.bal - a.bal || (a.s.name || '').localeCompare(b.s.name || ''))
+    .map(({ s, bal }) =>
+      `<div class="suki-row" onclick="openStaffDetail('${s.id}')">
+         <div class="suki-row-main">
+           <div class="suki-row-name">${esc(s.name || 'Staff')}</div>
+           <div class="suki-row-sub">${s.rate ? 'sahod ' + peso(s.rate) : 'walang naka-set na sahod'}${s.note ? ' · ' + esc(s.note) : ''}</div>
+         </div>
+         <div class="suki-row-bal ${bal > 0.0001 ? 'owe' : 'clear'}">${bal > 0.0001 ? peso(bal) : 'Walang vale ✓'}</div>
+       </div>`).join('');
+}
+window.renderVale = renderVale;
+
+function openVale() {
+  if (!valeEnabled()) return;
+  renderVale();
+  document.getElementById('valeModal').classList.add('open');
+}
+
+function openStaffModal(id) {
+  document.getElementById('staffEditId').value = id || '';
+  const s = id ? staffData.find(x => x.id === id) : null;
+  document.getElementById('staffModalTitle').textContent = s ? 'Edit Staff' : 'Add Staff';
+  document.getElementById('staffName').value = s ? (s.name || '') : '';
+  document.getElementById('staffRate').value = s && s.rate ? s.rate : '';
+  document.getElementById('staffNote').value = s ? (s.note || '') : '';
+  document.getElementById('staffDeleteBtn').style.display = s ? '' : 'none';
+  document.getElementById('staffModal').classList.add('open');
+  setTimeout(() => document.getElementById('staffName').focus(), 80);
+}
+
+function saveStaff() {
+  const id = document.getElementById('staffEditId').value;
+  const name = document.getElementById('staffName').value.trim();
+  if (!name) { toast('Pangalan ay kailangan.', 'error'); return; }
+  const rate = parseFloat(document.getElementById('staffRate').value) || 0;
+  const note = document.getElementById('staffNote').value.trim();
+  const nowISO = new Date().toISOString();
+  if (id) {
+    const s = staffData.find(x => x.id === id);
+    if (s) { s.name = name; s.rate = rate; s.note = note; s.updated_at = nowISO; }
+  } else {
+    staffData.push({ id: uid(), name, rate, note, created_at: nowISO, updated_at: nowISO });
+  }
+  dbSave('staff', staffData);
+  closeUtangModal('staffModal');
+  renderVale();
+  if (id && document.getElementById('staffDetailModal').classList.contains('open')) openStaffDetail(id);
+  toast(id ? 'Na-update ang staff.' : 'Naidagdag ang staff.');
+}
+
+function deleteStaff(id) {
+  const s = staffData.find(x => x.id === id);
+  if (!s) return;
+  if (!confirm(`Burahin si "${s.name}" at lahat ng vale records niya?`)) return;
+  const entries = valeData.filter(e => e.staff_id === id);
+  if (window.PHARMETRIKS_SYNC) {
+    window.PHARMETRIKS_SYNC.markDeleted('staff', id);
+    entries.forEach(e => window.PHARMETRIKS_SYNC.markDeleted('vale', e.id));
+  }
+  staffData = staffData.filter(x => x.id !== id);
+  valeData  = valeData.filter(e => e.staff_id !== id);
+  dbSave('staff', staffData);
+  dbSave('vale', valeData);
+  closeUtangModal('staffModal');
+  closeUtangModal('staffDetailModal');
+  renderVale();
+  toast('Nabura ang staff.');
+}
+
+function openStaffDetail(id) {
+  const s = staffData.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('detailStaffId').value = id;
+  document.getElementById('detailStaffName').textContent = s.name || 'Staff';
+  document.getElementById('detailStaffMeta').textContent =
+    [s.rate ? 'sahod ' + peso(s.rate) : '', s.note || ''].filter(Boolean).join(' · ');
+  const bal = staffBalance(id);
+  const balEl = document.getElementById('detailStaffBalance');
+  balEl.textContent = bal > 0.0001 ? peso(bal) : 'Walang vale ✓';
+  balEl.className = 'suki-bal-val ' + (bal > 0.0001 ? 'owe' : 'clear');
+  renderStaffLedger(id);
+  document.getElementById('staffDetailModal').classList.add('open');
+}
+
+function renderStaffLedger(id) {
+  const host = document.getElementById('staffLedger');
+  const entries = valeData.filter(e => e.staff_id === id)
+    .sort((a, b) => (b.date + (b.created_at || '')).localeCompare(a.date + (a.created_at || '')));
+  if (!entries.length) { host.innerHTML = '<div class="ins-empty">Wala pang record.</div>'; return; }
+  host.innerHTML = entries.map(e => {
+    const isVale = e.kind !== 'bawas';
+    return `<div class="ledger-row">
+      <div class="ledger-info">
+        <div class="ledger-kind ${isVale ? 'charge' : 'payment'}">${isVale ? 'Vale' : 'Bawas sa sahod'}</div>
+        <div class="ledger-sub">${esc(e.date)}${e.note ? ' · ' + esc(e.note) : ''}</div>
+      </div>
+      <div class="ledger-amt ${isVale ? 'charge' : 'payment'}">${isVale ? '+' : '−'}${peso(e.amount)}</div>
+      <button class="ledger-del" title="Burahin" onclick="deleteValeEntry('${e.id}')">×</button>
+    </div>`;
+  }).join('');
+}
+
+function openValeEntryModal(staffId) {
+  if (!staffId) return;
+  document.getElementById('valeEntryStaffId').value = staffId;
+  document.getElementById('valeAmount').value = '';
+  document.getElementById('valeDate').value = today();
+  document.getElementById('valeNote').value = '';
+  document.getElementById('valeLogExpense').checked = true;
+  document.getElementById('valeEntryModal').classList.add('open');
+  setTimeout(() => document.getElementById('valeAmount').focus(), 80);
+}
+
+function saveValeEntry() {
+  const staffId = document.getElementById('valeEntryStaffId').value;
+  const s = staffData.find(x => x.id === staffId);
+  const amount = parseFloat(document.getElementById('valeAmount').value);
+  if (!s) { toast('Walang staff.', 'error'); return; }
+  if (!(amount > 0)) { toast('Maglagay ng tamang halaga.', 'error'); return; }
+  const date = document.getElementById('valeDate').value || today();
+  const note = document.getElementById('valeNote').value.trim();
+  const nowISO = new Date().toISOString();
+  valeData.push({ id: uid(), staff_id: staffId, kind: 'vale', amount, date, note, created_at: nowISO, updated_at: nowISO });
+  dbSave('vale', valeData);
+  // Vale is cash leaving the drawer today — logging it keeps the monthly
+  // P&L right (sahod later logs only the NET, so vale + net = gross).
+  if (document.getElementById('valeLogExpense').checked) {
+    expData.push({ id: uid(), date, category: 'Salary', description: `Vale — ${s.name}${note ? ' (' + note + ')' : ''}`, amount, created_at: nowISO, updated_at: nowISO });
+    dbSave('exp', expData);
+    if (typeof renderExpenses === 'function') renderExpenses();
+    if (typeof renderOpexStats === 'function') renderOpexStats();
+  }
+  closeUtangModal('valeEntryModal');
+  openStaffDetail(staffId);
+  renderVale();
+  toast('Naitala ang vale.');
+}
+
+function deleteValeEntry(id) {
+  const e = valeData.find(x => x.id === id);
+  if (!e) return;
+  if (window.PHARMETRIKS_SYNC) window.PHARMETRIKS_SYNC.markDeleted('vale', id);
+  valeData = valeData.filter(x => x.id !== id);
+  dbSave('vale', valeData);
+  if (document.getElementById('staffDetailModal').classList.contains('open')) openStaffDetail(e.staff_id);
+  renderVale();
+  toast('Nabura ang record.');
+}
+
+function openSahodModal(staffId) {
+  const s = staffData.find(x => x.id === staffId);
+  if (!s) return;
+  const bal = staffBalance(staffId);
+  document.getElementById('sahodStaffId').value = staffId;
+  document.getElementById('sahodStaffLabel').textContent = `${s.name} — vale balance: ${bal > 0 ? peso(bal) : 'wala'}`;
+  const gross = Number(s.rate) || 0;
+  document.getElementById('sahodGross').value = gross > 0 ? gross : '';
+  document.getElementById('sahodDeduct').value = Math.min(bal, gross > 0 ? gross : bal).toFixed(2);
+  document.getElementById('sahodLogExpense').checked = true;
+  updateSahodComputation();
+  document.getElementById('sahodModal').classList.add('open');
+  setTimeout(() => document.getElementById('sahodGross').focus(), 80);
+}
+
+function updateSahodComputation() {
+  const gross = parseFloat(document.getElementById('sahodGross').value) || 0;
+  const deduct = parseFloat(document.getElementById('sahodDeduct').value) || 0;
+  const el = document.getElementById('sahodComputation');
+  if (gross <= 0) { el.textContent = 'Maglagay ng sahod para makita ang computation.'; return; }
+  el.innerHTML = `${peso(gross)} sahod − ${peso(deduct)} vale = <b>${peso(Math.max(0, gross - deduct))} ang iaabot</b>`;
+}
+
+function settleSahod() {
+  const staffId = document.getElementById('sahodStaffId').value;
+  const s = staffData.find(x => x.id === staffId);
+  if (!s) { toast('Walang staff.', 'error'); return; }
+  const gross = parseFloat(document.getElementById('sahodGross').value);
+  let deduct = parseFloat(document.getElementById('sahodDeduct').value) || 0;
+  if (!(gross > 0)) { toast('Maglagay ng sahod (gross).', 'error'); return; }
+  const bal = staffBalance(staffId);
+  if (deduct < 0) deduct = 0;
+  if (deduct > bal) { toast(`Lampas sa vale balance (${peso(bal)}) ang ibabawas.`, 'error'); return; }
+  if (deduct > gross) { toast('Mas malaki ang bawas kaysa sahod.', 'error'); return; }
+  const net = gross - deduct;
+  const nowISO = new Date().toISOString();
+  const dateStr = today();
+  if (deduct > 0) {
+    valeData.push({ id: uid(), staff_id: staffId, kind: 'bawas', amount: deduct, date: dateStr, note: `Sahod ${peso(gross)} − vale = ${peso(net)}`, created_at: nowISO, updated_at: nowISO });
+    dbSave('vale', valeData);
+  }
+  if (document.getElementById('sahodLogExpense').checked && net > 0) {
+    expData.push({ id: uid(), date: dateStr, category: 'Salary', description: `Sahod — ${s.name} (${peso(gross)} − ${peso(deduct)} vale)`, amount: net, created_at: nowISO, updated_at: nowISO });
+    dbSave('exp', expData);
+    if (typeof renderExpenses === 'function') renderExpenses();
+    if (typeof renderOpexStats === 'function') renderOpexStats();
+  }
+  closeUtangModal('sahodModal');
+  openStaffDetail(staffId);
+  renderVale();
+  toast(`Sahod ni ${s.name}: ${peso(gross)} − ${peso(deduct)} vale = ${peso(net)} ✓`);
+}
+
+// ══════════════════ BODEGA STOCK (add-on: 'bodega_stock') ══════════════════
+function bodegaEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('bodega_stock')); }
+
+function applyBodegaVisibility() {
+  const on = bodegaEnabled();
+  const b = document.getElementById('bodegaBtn');
+  if (b) b.style.display = on ? '' : 'none';
+  const f = document.getElementById('bodegaField');
+  if (f) f.style.display = on ? '' : 'none';
+}
+window.applyBodegaVisibility = applyBodegaVisibility;
+
+function openBodega() {
+  if (!bodegaEnabled()) return;
+  const s = document.getElementById('bodegaSearch'); if (s) s.value = '';
+  renderBodegaList();
+  document.getElementById('bodegaModal').classList.add('open');
+}
+
+function renderBodegaList() {
+  const host = document.getElementById('bodegaBody');
+  if (!host) return;
+  const s = document.getElementById('bodegaSearch');
+  const q = (s && s.value || '').toLowerCase();
+  const items = (invData || []).filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)));
+  const sum = document.getElementById('bodegaSummary');
+  if (sum) {
+    const withBodega = (invData || []).filter(p => (Number(p.bodega_qty) || 0) > 0);
+    sum.textContent = `${withBodega.length} item sa bodega · ${withBodega.reduce((t, p) => t + Number(p.bodega_qty), 0)} pcs`;
+  }
+  if (!items.length) { host.innerHTML = '<div class="ins-empty">Walang produkto.</div>'; return; }
+  host.innerHTML = items.map(p => {
+    const name = esc(p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + esc(p.dosage) : '');
+    return `<div class="audit-row">
+      <div class="audit-name">${name}</div>
+      <div class="bodega-counts"><span title="Estante">E: <b>${Number(p.qty) || 0}</b></span><span title="Bodega">B: <b>${Number(p.bodega_qty) || 0}</b></span></div>
+      <input type="number" class="audit-input" id="bq-${p.id}" min="1" placeholder="qty">
+      <button class="btn btn-secondary btn-sm" title="Bodega → Estante" onclick="transferBodega('${p.id}', 'out')">⬆ Estante</button>
+      <button class="btn btn-ghost btn-sm" title="Estante → Bodega" onclick="transferBodega('${p.id}', 'in')">⬇ Bodega</button>
+    </div>`;
+  }).join('');
+}
+
+function transferBodega(id, dir) {
+  const p = (invData || []).find(x => x.id === id);
+  if (!p) return;
+  const input = document.getElementById('bq-' + id);
+  const n = parseInt(input && input.value);
+  if (!(n > 0)) { toast('Maglagay ng qty na ililipat.', 'error'); return; }
+  const estante = Number(p.qty) || 0;
+  const bodega = Number(p.bodega_qty) || 0;
+  if (dir === 'out') {           // bodega → estante (para mabenta)
+    if (n > bodega) { toast(`${bodega} lang ang nasa bodega.`, 'error'); return; }
+    p.bodega_qty = bodega - n; p.qty = estante + n;
+  } else {                       // estante → bodega (itago)
+    if (n > estante) { toast(`${estante} lang ang nasa estante.`, 'error'); return; }
+    p.qty = estante - n; p.bodega_qty = bodega + n;
+  }
+  p.updated_at = new Date().toISOString();   // so the move wins LWW sync merges
+  dbSave('inv', invData);
+  if (input) input.value = '';
+  renderBodegaList();
+  renderInventory();
+  renderProductList();
+  toast(dir === 'out' ? `${n} pcs inilipat sa estante.` : `${n} pcs itinago sa bodega.`);
+}
+
 function openInvModal(id) {
   if (id) {
     const p = invData.find(x => x.id === id);
@@ -3103,11 +3548,13 @@ function openInvModal(id) {
     document.getElementById('invSupplier').value = p.supplier || '';
     document.getElementById('invRxRequired').value = p.rx_required === 'Yes' ? 'Yes' : 'No';
     document.getElementById('invRemarks').value = p.remarks || '';
+    document.getElementById('invBodega').value = p.bodega_qty || 0;
   } else {
     document.getElementById('invModalTitle').textContent = 'Add Product';
     document.getElementById('invEditId').value = '';
     ['invGenericName','invBrandName','invDosage','invCategory','invBatchNo','invBarcode','invExpiry','invSupplier','invRemarks'].forEach(k => document.getElementById(k).value = '');
     document.getElementById('invQty').value = 0;
+    document.getElementById('invBodega').value = 0;
     document.getElementById('invReorder').value = '';
     document.getElementById('invPrice').value = '';
     document.getElementById('invCost').value = '';
@@ -3141,6 +3588,10 @@ function saveProduct() {
     batch_no: document.getElementById('invBatchNo').value.trim() || genBatchNo(),
     expiry_date: document.getElementById('invExpiry').value || '',
     qty: parseInt(document.getElementById('invQty').value) || 0,
+    // Bodega qty only editable when the add-on is on; otherwise preserve.
+    bodega_qty: bodegaEnabled()
+      ? (parseInt(document.getElementById('invBodega').value) || 0)
+      : (existing ? (existing.bodega_qty || 0) : 0),
     price: priceNum,
     cost: parseFloat(document.getElementById('invCost').value) || 0,
     supplier: document.getElementById('invSupplier').value.trim(),
@@ -3790,6 +4241,12 @@ window.PHARMETRIKS_APPLY = function (key, arr) {
   } else if (key === 'po') {
     poData = arr;
     if (typeof renderSuppliers === 'function') renderSuppliers();
+  } else if (key === 'staff') {
+    staffData = arr;
+    if (typeof renderVale === 'function') renderVale();
+  } else if (key === 'vale') {
+    valeData = arr;
+    if (typeof renderVale === 'function') renderVale();
   }
 };
 
@@ -3922,6 +4379,8 @@ applyPriceListVisibility();  // reveal the Price List button if cached features 
 applyPricingVisibility();    // reveal the Pricing button if cached features include it
 applyAuditVisibility();      // reveal the Stock Audit button if cached features include it
 applySuppliersVisibility();  // reveal the Suppliers tab if cached features include it
+applyValeVisibility();       // reveal the Vale & Sahod button if cached features include it
+applyBodegaVisibility();     // reveal the Bodega button + field if cached features include it
 
 // ══════════════════ GUIDED TOUR (spotlight) ══════════════════
 const TOUR_SEEN_KEY = 'rxmvp_tour_seen_v1';
@@ -4433,6 +4892,8 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.applyPricingVisibility) window.applyPricingVisibility();
         if (window.applyAuditVisibility) window.applyAuditVisibility();
         if (window.applySuppliersVisibility) window.applySuppliersVisibility();
+        if (window.applyValeVisibility) window.applyValeVisibility();
+        if (window.applyBodegaVisibility) window.applyBodegaVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -4485,6 +4946,8 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     if (window.applyPricingVisibility) window.applyPricingVisibility();
     if (window.applyAuditVisibility) window.applyAuditVisibility();
     if (window.applySuppliersVisibility) window.applySuppliersVisibility();
+    if (window.applyValeVisibility) window.applyValeVisibility();
+    if (window.applyBodegaVisibility) window.applyBodegaVisibility();
     if (window.renderSmartAlerts) window.renderSmartAlerts();
   } catch (e) {}
 
@@ -4505,9 +4968,9 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
  * with tombstones so deletes propagate; per-collection version for optimistic
  * concurrency. Reuses window.dbLoad/dbSave and window.PHARMETRIKS_APPLY. */
 (function () {
-  var COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang', 'suppliers', 'po'];
+  var COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang', 'suppliers', 'po', 'staff', 'vale'];
   var TOMB_KEY = 'rxmvp_tombstones';
-  var versions = { inv: 0, sales: 0, exp: 0, suki: 0, utang: 0, suppliers: 0, po: 0 };
+  var versions = { inv: 0, sales: 0, exp: 0, suki: 0, utang: 0, suppliers: 0, po: 0, staff: 0, vale: 0 };
   var timers = {};
   var didInitialPull = false;
 
