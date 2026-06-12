@@ -40,7 +40,7 @@ export default function AddonPicker({ selected, onChange, granted, mode }: Props
           {mode === 'new' ? 'Optional add-ons' : 'Pumili ng bagong add-ons'}
         </div>
         <div className="text-[11px] font-bold text-ink-2/60">
-          {peso(ADDON_PRICE_PHP)} each · one-time din
+          {peso(ADDON_PRICE_PHP)} / buwan bawat isa
         </div>
       </div>
 
@@ -70,15 +70,22 @@ export default function AddonPicker({ selected, onChange, granted, mode }: Props
         <div className="flex items-center justify-between">
           <span>
             Add-ons{pickedCount > 0 && (
-              <> · {pickedCount} × {peso(ADDON_PRICE_PHP)}</>
+              <> · {pickedCount} × {peso(ADDON_PRICE_PHP)}/buwan</>
             )}
           </span>
           <span className="font-mono font-bold">{peso(addonsTotal)}</span>
         </div>
         <div className="mt-1.5 flex items-center justify-between border-t border-ink-2/10 pt-1.5 text-[14px] font-extrabold text-ink">
-          <span>Total na babayaran</span>
+          <span>{mode === 'new' ? 'Babayaran ngayon' : 'Babayaran (unang buwan)'}</span>
           <span className="font-mono text-accent">{peso(total)}</span>
         </div>
+        {pickedCount > 0 && (
+          <div className="mt-1 text-right text-[10.5px] font-semibold text-ink-2/55">
+            {mode === 'new'
+              ? `Kasama ang ₱${APP_PRICE_PHP.toLocaleString('en-PH')} base (one-time) + ${peso(addonsTotal)}/buwan add-ons`
+              : `${peso(addonsTotal)} kada buwan para sa add-ons`}
+          </div>
+        )}
       </div>
 
       {mode === 'upgrade' && pickedCount === 0 && (
@@ -86,6 +93,10 @@ export default function AddonPicker({ selected, onChange, granted, mode }: Props
           Pumili muna ng kahit isang add-on bago magbayad.
         </p>
       )}
+      <p className="mt-2 text-[11px] font-semibold text-ink-2/55 leading-relaxed">
+        Base app (₱{APP_PRICE_PHP.toLocaleString('en-PH')}) ay one-time. Ang mga add-on
+        ay ₱{ADDON_PRICE_PHP}/buwan kada isa — i-renew tuwing buwan para manatiling bukas.
+      </p>
     </div>
   );
 }

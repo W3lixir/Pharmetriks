@@ -5,9 +5,15 @@
 // tabs (dispensing / inventory / opex) are NOT listed here — they stay free
 // for every approved user.
 //
-// All 10 add-ons are DEFINED here, but only `cloud_sync` and `discount` are
-// built into the app so far. The rest are sellable/grantable now and get
-// gated in the app with `window.PHARMETRIKS_HAS('<key>')` as each one ships.
+// PRICING MODEL (June 2026): add-ons are ₱99/month. A feature's value in the
+// map is either:
+//   true            — lifetime grant (grandfathered accounts, comps)
+//   ISO date string — active until that expiry; admin grants/renewals add
+//                     ADDON_TERM_DAYS from now (or from the current expiry)
+//   false / absent  — off
+// The app itself still sees plain booleans: /api/verify-license collapses the
+// map to "active right now" before returning it.
+//
 // Keys are stable once shipped — they're persisted per account.
 
 export type FeatureDef = {
@@ -16,7 +22,53 @@ export type FeatureDef = {
   description: string;
 };
 
-export type FeatureMap = Record<string, boolean>;
+/** Per-account grant map: true = lifetime, string = ISO expiry, false/absent = off. */
+export type FeatureMap = Record<string, boolean | string>;
+
+/** Days granted per ₱99 payment / admin toggle-on. */
+export const ADDON_TERM_DAYS = 30;
+
+/** True if a single grant value is active right now. */
+export function featureActive(v: boolean | string | undefined | null): boolean {
+  if (v === true) return true;
+  if (typeof v === 'string') {
+    const t = Date.parse(v);
+    return Number.isFinite(t) && t > Date.now();
+  }
+  return false;
+}
+
+/** Expiry helpers for admin display. null = lifetime or off. */
+export function featureExpiry(v: boolean | string | undefined | null): Date | null {
+  if (typeof v !== 'string') return null;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? new Date(t) : null;
+}
+
+/** Days remaining (ceil). null = lifetime; <= 0 = lapsed. Off keys return null too — check featureActive first. */
+export function featureDaysLeft(v: boolean | string | undefined | null): number | null {
+  const exp = featureExpiry(v);
+  if (!exp) return null;
+  return Math.ceil((exp.getTime() - Date.now()) / 86_400_000);
+}
+
+/** Next expiry when granting/renewing: extends an active grant, restarts a lapsed one. */
+export function nextExpiry(current: boolean | string | undefined | null): string {
+  const base = featureActive(current) && typeof current === 'string'
+    ? Date.parse(current)
+    : Date.now();
+  return new Date(base + ADDON_TERM_DAYS * 86_400_000).toISOString();
+}
+
+/** Collapse a grant map to plain booleans of what's active right now. */
+export function activeFeatureBooleans(map: FeatureMap | null | undefined): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  if (!map) return out;
+  for (const f of FEATURES) {
+    if (featureActive(map[f.key])) out[f.key] = true;
+  }
+  return out;
+}
 
 export const FEATURES: FeatureDef[] = [
   { key: 'cloud_sync',      label: 'Offline + Online Sync',        description: 'Cloud backup + multi-device sync of inventory, sales, and expenses.' },
@@ -33,10 +85,10 @@ export const FEATURES: FeatureDef[] = [
   { key: 'bodega_stock',    label: 'Bodega Stock',                 description: 'Hiwalay ang bilang ng nasa estante at nasa bodega. Kapag ubos sa display, sasabihin ng app kung may makukuha pa sa likod.' },
 ];
 
-/** Keys in `map` that are explicitly true. */
+/** Keys in `map` that are active right now (lifetime or unexpired). */
 export function enabledKeys(map: FeatureMap | null | undefined): string[] {
   if (!map) return [];
-  return FEATURES.filter(f => map[f.key] === true).map(f => f.key);
+  return FEATURES.filter(f => featureActive(map[f.key])).map(f => f.key);
 }
 
 /** Parse + sanitize a client-provided JSON feature selection: keeps only
@@ -54,7 +106,7 @@ export function sanitizeFeatureSelection(raw: unknown): FeatureMap {
   return out;
 }
 
-/** True if `map` has `key` explicitly enabled. */
+/** True if `map` has `key` active right now (lifetime or unexpired). */
 export function hasFeature(map: FeatureMap | null | undefined, key: string): boolean {
-  return !!map && map[key] === true;
+  return !!map && featureActive(map[key]);
 }

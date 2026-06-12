@@ -43,7 +43,7 @@ export default function Hero() {
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 justify-center lg:justify-start text-[12.5px] text-ink-2/80 font-semibold">
               <span className="inline-flex items-center gap-1.5"><Icon name="wifi-off" size={14} /> Works offline</span>
               <span className="inline-flex items-center gap-1.5"><Icon name="lock" size={14} /> Data stays on your phone</span>
-              <span className="inline-flex items-center gap-1.5"><Icon name="check-circle" size={14} /> No subscription</span>
+              <span className="inline-flex items-center gap-1.5"><Icon name="check-circle" size={14} /> One-time ang app</span>
             </div>
           </div>
 

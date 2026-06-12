@@ -81,12 +81,13 @@ export default function Pricing() {
             <Icon name="sparkle" size={11} /> Add-ons
           </Pill>
           <h3 className="mt-4 text-[22px] sm:text-3xl font-extrabold tracking-tight">
-            Mga optional add-ons — {peso(ADDON_PRICE_PHP)} each, isang beses lang din.
+            Mga optional add-ons — {peso(ADDON_PRICE_PHP)} / buwan kada isa.
           </h3>
           <p className="mt-3 text-[14px] text-ink-2/80 font-medium leading-relaxed max-w-xl mx-auto">
-            Piliin mo lang ang kailangan mo pag-checkout — makikita mo agad ang
-            total bago ka magbayad. Pwede ka ring mag-add later. Hindi mandatory,
-            hindi subscription.
+            Piliin mo lang ang kailangan mo. Hindi mandatory — gumagana ang app
+            kahit wala. Bayad lang kada buwan para sa add-ons na gamit mo, at
+            puwedeng ihinto anumang oras. Ang base app ({peso(APP_PRICE_PHP)}) ay
+            one-time pa rin.
           </p>
         </div>
 
@@ -96,7 +97,7 @@ export default function Pricing() {
               <div className="flex items-start justify-between gap-3">
                 <h4 className="text-[14.5px] font-extrabold tracking-tight">{f.label}</h4>
                 <span className="shrink-0 rounded-full bg-accent/10 px-2.5 py-1 font-mono text-[11.5px] font-bold text-accent">
-                  {peso(ADDON_PRICE_PHP)}
+                  {peso(ADDON_PRICE_PHP)}/buwan
                 </span>
               </div>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-2/75 font-medium">
@@ -107,9 +108,9 @@ export default function Pricing() {
         </div>
 
         <p className="mt-6 text-center text-[12px] font-semibold text-ink-2/65">
-          Example: base app + 3 add-ons = {peso(APP_PRICE_PHP)} +{' '}
-          3 × {peso(ADDON_PRICE_PHP)} ={' '}
-          <strong className="text-ink-2">{peso(APP_PRICE_PHP + 3 * ADDON_PRICE_PHP)}</strong>, one-time.
+          Example: base app ({peso(APP_PRICE_PHP)} one-time) + 3 add-ons ={' '}
+          <strong className="text-ink-2">{peso(3 * ADDON_PRICE_PHP)}/buwan</strong>{' '}
+          habang gamit mo sila.
         </p>
       </div>
     </section>

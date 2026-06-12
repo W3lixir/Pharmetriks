@@ -47,7 +47,8 @@ export default function Footer() {
             </Link>
             <p className="mt-4 text-[13px] text-ink-2/75 font-medium leading-relaxed max-w-xs">
               Offline-first pharmacy audit tool. Built for Filipino pharmacy
-              staff. Walang ads, walang tracking, walang subscription.
+              staff. Walang ads, walang tracking. One-time ang app — optional
+              lang ang monthly add-ons.
             </p>
 
             {/* Trust signals */}

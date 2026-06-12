@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, adminService } from '@/lib/admin';
-import { FEATURES, type FeatureMap } from '@/lib/features';
+import { FEATURES, featureActive, nextExpiry, ADDON_TERM_DAYS, type FeatureMap } from '@/lib/features';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -23,8 +23,9 @@ async function logAction(args: {
 
 // ── Approve ─────────────────────────────────────────────────────────────
 // Approving implies the admin verified the GCash amount against the user's
-// requested add-ons, so they're auto-applied (union — never removes anything
-// admin already granted). Individual toggles remain available to undo.
+// requested add-ons, so they're auto-applied. Add-ons are monthly: each
+// requested key gets ADDON_TERM_DAYS from now (or extends a still-active
+// grant — that's a renewal). Lifetime (true) grants are never downgraded.
 
 export async function approveUserAction(formData: FormData): Promise<ActionResult> {
   const admin     = await requireAdmin();
@@ -47,7 +48,7 @@ export async function approveUserAction(formData: FormData): Promise<ActionResul
     .filter(f => requested[f.key] === true && granted[f.key] !== true)
     .map(f => f.key);
   const nextFeatures: FeatureMap = { ...granted };
-  for (const k of appliedKeys) nextFeatures[k] = true;
+  for (const k of appliedKeys) nextFeatures[k] = nextExpiry(granted[k]);
 
   const { error } = await svc
     .from('profiles')
@@ -66,7 +67,7 @@ export async function approveUserAction(formData: FormData): Promise<ActionResul
     targetUserId: targetId,
     action:       'approve',
     notes: appliedKeys.length
-      ? `${notes ? `${notes}; ` : ''}applied add-ons: ${appliedKeys.join(', ')}`
+      ? `${notes ? `${notes}; ` : ''}applied add-ons (${ADDON_TERM_DAYS}d): ${appliedKeys.join(', ')}`
       : notes,
   });
 
@@ -92,13 +93,15 @@ export async function applyRequestedFeaturesAction(formData: FormData): Promise<
 
   const granted   = (row?.features ?? {}) as FeatureMap;
   const requested = (row?.requested_features ?? {}) as FeatureMap;
+  // Apply if requested AND not already active (covers brand-new add-ons AND
+  // renewals of lapsed ones, since a lapsed expiry-string is not active).
   const appliedKeys = FEATURES
-    .filter(f => requested[f.key] === true && granted[f.key] !== true)
+    .filter(f => requested[f.key] === true && !featureActive(granted[f.key]))
     .map(f => f.key);
   if (!appliedKeys.length) return { ok: false, error: 'No new requested add-ons to apply.' };
 
   const nextFeatures: FeatureMap = { ...granted };
-  for (const k of appliedKeys) nextFeatures[k] = true;
+  for (const k of appliedKeys) nextFeatures[k] = nextExpiry(granted[k]);
 
   const { error } = await svc
     .from('profiles')
@@ -110,7 +113,7 @@ export async function applyRequestedFeaturesAction(formData: FormData): Promise<
     adminId:      admin.userId,
     targetUserId: targetId,
     action:       'feature',
-    notes:        `applied requested add-ons: ${appliedKeys.join(', ')}`,
+    notes:        `applied requested add-ons (${ADDON_TERM_DAYS}d): ${appliedKeys.join(', ')}`,
   });
 
   revalidatePath('/admin');
@@ -201,11 +204,15 @@ export async function restoreUserAction(formData: FormData): Promise<ActionResul
 
 // ── Toggle a per-account add-on feature ─────────────────────────────────
 
+// `mode`:
+//   'toggle'   — enabled=true grants/renews ADDON_TERM_DAYS, false turns off
+//   'lifetime' — enabled=true grants forever (comps); false turns off
 export async function setFeatureAction(formData: FormData): Promise<ActionResult> {
   const admin      = await requireAdmin();
   const targetId   = String(formData.get('target_user_id') ?? '');
   const featureKey = String(formData.get('feature_key') ?? '');
   const enabled    = String(formData.get('enabled') ?? '') === 'true';
+  const mode       = String(formData.get('mode') ?? 'toggle');
   if (!targetId || !featureKey) return { ok: false, error: 'Missing target user or feature.' };
   if (!FEATURES.some(f => f.key === featureKey)) {
     return { ok: false, error: `Unknown feature: ${featureKey}` };
@@ -222,7 +229,12 @@ export async function setFeatureAction(formData: FormData): Promise<ActionResult
   if (readErr) return { ok: false, error: readErr.message };
 
   const current = (row?.features ?? {}) as FeatureMap;
-  const next: FeatureMap = { ...current, [featureKey]: enabled };
+  const value: boolean | string = !enabled
+    ? false
+    : mode === 'lifetime'
+      ? true
+      : nextExpiry(current[featureKey]); // +30d, extends an active grant
+  const next: FeatureMap = { ...current, [featureKey]: value };
 
   const { error } = await svc.from('profiles').update({ features: next }).eq('id', targetId);
   if (error) return { ok: false, error: error.message };
@@ -231,7 +243,7 @@ export async function setFeatureAction(formData: FormData): Promise<ActionResult
     adminId:      admin.userId,
     targetUserId: targetId,
     action:       'feature',
-    notes:        `${featureKey}=${enabled}`,
+    notes:        `${featureKey}=${enabled ? (mode === 'lifetime' ? 'lifetime' : `+${ADDON_TERM_DAYS}d`) : 'off'}`,
   });
 
   revalidatePath('/admin');

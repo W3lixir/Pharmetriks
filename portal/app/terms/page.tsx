@@ -46,7 +46,8 @@ export default function TermsPage() {
 
       <h2 id="payment">Payment &amp; access</h2>
       <ul>
-        <li><strong>Price</strong>: ₱249 one-time payment via GCash.</li>
+        <li><strong>Price</strong>: ₱249 one-time payment via GCash para sa app.</li>
+        <li><strong>Optional add-ons</strong>: ₱99/buwan kada add-on, optional lang. Mananatiling bukas habang naka-renew; titigil ang feature kapag hindi na-renew. Hindi apektado ang base app at ang naka-save mong data.</li>
         <li><strong>What it includes</strong>: lifetime access sa current version ng app + free updates.</li>
         <li><strong>Approval</strong>: manual yung pag-approve namin after ma-verify yung receipt. Usually within a few hours.</li>
         <li><strong>Sales are final</strong>: please review the <a href="/refund-policy">No Refund Policy</a> bago mag-bayad.</li>

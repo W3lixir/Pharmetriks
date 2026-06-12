@@ -4,7 +4,13 @@ import { useState, useTransition } from 'react';
 import Icon from '@/components/ui/Icon';
 import GlassCard from '@/components/ui/GlassCard';
 import Toggle from '@/components/ui/Toggle';
-import { FEATURES } from '@/lib/features';
+import {
+  FEATURES,
+  featureActive,
+  featureDaysLeft,
+  nextExpiry,
+  type FeatureMap,
+} from '@/lib/features';
 import { APP_PRICE_PHP, ADDON_PRICE_PHP, peso } from '@/lib/pricing';
 import {
   approveUserAction,
@@ -28,7 +34,7 @@ type Profile = {
   approved_at: string | null;
   notes: string | null;
   created_at: string;
-  features: Record<string, boolean> | null;
+  features: FeatureMap | null;
   requested_features: Record<string, boolean> | null;
 };
 
@@ -61,13 +67,15 @@ export default function UserRow({ profile }: { profile: Profile }) {
   const [revokeReason, setRevokeReason] = useState('');
   const [approveNotes, setApproveNotes] = useState('');
 
-  // Per-account add-on features (optimistic local copy).
-  const [features, setFeatures] = useState<Record<string, boolean>>(profile.features ?? {});
+  // Per-account add-on grants (optimistic local copy). Values may be a boolean
+  // (lifetime/off) or an ISO expiry string (monthly add-ons).
+  const [features, setFeatures] = useState<FeatureMap>(profile.features ?? {});
 
-  // Add-ons the user picked at checkout but doesn't have yet.
+  // Add-ons the user picked at checkout but isn't currently entitled to
+  // (covers brand-new add-ons AND renewals of lapsed ones).
   const requested = profile.requested_features ?? {};
   const requestedNew = FEATURES.filter(
-    f => requested[f.key] === true && features[f.key] !== true,
+    f => requested[f.key] === true && !featureActive(features[f.key]),
   );
   // What the GCash screenshot amount should read:
   // new signups pay base + add-ons; approved users (upgrades) pay add-ons only.
@@ -75,15 +83,16 @@ export default function UserRow({ profile }: { profile: Profile }) {
   const expectedTotal = (isFirstPurchase ? APP_PRICE_PHP : 0) + requestedNew.length * ADDON_PRICE_PHP;
 
   function toggleFeature(key: string) {
-    const nextVal = !features[key];
+    const turningOn = !featureActive(features[key]);
     const prev = features;
-    setFeatures({ ...features, [key]: nextVal }); // optimistic
+    // Optimistic: enabling grants/extends a 30-day term, disabling turns off.
+    setFeatures({ ...features, [key]: turningOn ? nextExpiry(features[key]) : false });
     setError(null);
     setActionLabel(`feature:${key}`);
     const fd = new FormData();
     fd.set('target_user_id', profile.id);
     fd.set('feature_key', key);
-    fd.set('enabled', String(nextVal));
+    fd.set('enabled', String(turningOn));
     startTransition(async () => {
       const res = await setFeatureAction(fd);
       if (res && 'ok' in res && !res.ok) {
@@ -125,7 +134,7 @@ export default function UserRow({ profile }: { profile: Profile }) {
     if (requestedNew.length) {
       setFeatures(prev => {
         const next = { ...prev };
-        for (const f of requestedNew) next[f.key] = true;
+        for (const f of requestedNew) next[f.key] = nextExpiry(prev[f.key]);
         return next;
       });
     }
@@ -136,7 +145,7 @@ export default function UserRow({ profile }: { profile: Profile }) {
     const prev = features;
     setFeatures(p => {
       const next = { ...p };
-      for (const f of requestedNew) next[f.key] = true;
+      for (const f of requestedNew) next[f.key] = nextExpiry(p[f.key]);
       return next;
     });
     setError(null);
@@ -322,22 +331,37 @@ export default function UserRow({ profile }: { profile: Profile }) {
             <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] font-extrabold uppercase tracking-[1.5px] text-accent">
                 Add-on features
+                <span className="ml-1.5 font-bold normal-case tracking-normal text-ink-2/45">
+                  ({peso(ADDON_PRICE_PHP)}/buwan · toggle = +30 araw)
+                </span>
               </div>
               <span className="text-[11px] font-semibold text-ink-2/55">
-                {Object.values(features).filter(Boolean).length} of {FEATURES.length} on
+                {FEATURES.filter(f => featureActive(features[f.key])).length} of {FEATURES.length} active
               </span>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              {FEATURES.map(f => (
-                <Toggle
-                  key={f.key}
-                  label={f.label}
-                  description={f.description}
-                  checked={!!features[f.key]}
-                  disabled={pending}
-                  onChange={() => toggleFeature(f.key)}
-                />
-              ))}
+              {FEATURES.map(f => {
+                const v = features[f.key];
+                const active = featureActive(v);
+                const days = featureDaysLeft(v);
+                const term = !active
+                  ? null
+                  : v === true
+                    ? 'lifetime'
+                    : days !== null
+                      ? `${days} araw na natira`
+                      : null;
+                return (
+                  <Toggle
+                    key={f.key}
+                    label={term ? `${f.label} — ${term}` : f.label}
+                    description={f.description}
+                    checked={active}
+                    disabled={pending}
+                    onChange={() => toggleFeature(f.key)}
+                  />
+                );
+              })}
             </div>
           </div>
 

@@ -23,8 +23,8 @@ const PRINCIPLES = [
   },
   {
     icon: 'zap' as const,
-    title: 'No subscriptions',
-    body: "Tired tayong magbayad ng monthly fees sa software na minsan lang naman natin gagamitin. One-time ₱249, lifetime access. Simple at honest.",
+    title: 'One-time ang app',
+    body: "Ang app mismo, one-time ₱249 — lifetime access, walang renewal. Optional lang ang add-ons (₱99/buwan) kung kailangan mo — bayad ka lang sa gamit mo. Simple at honest.",
   },
   {
     icon: 'heart' as const,

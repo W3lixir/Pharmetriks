@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { activeFeatureBooleans, type FeatureMap } from '@/lib/features';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,9 @@ export async function POST(): Promise<NextResponse<VerifyResult>> {
     valid,
     status: profile.status as VerifyResult['status'],
     expires_at: profile.license_expires_at ?? null,
-    features: (profile.features ?? {}) as Record<string, boolean>,
+    // Add-ons are monthly: grants may carry an expiry date. The app only ever
+    // sees plain booleans of what's active at verify time; a lapsed add-on
+    // simply disappears on the next app load.
+    features: activeFeatureBooleans((profile.features ?? {}) as FeatureMap),
   });
 }
