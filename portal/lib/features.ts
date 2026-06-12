@@ -29,6 +29,8 @@ export const FEATURES: FeatureDef[] = [
   { key: 'stock_audit',     label: 'Stock Audit Mode',             description: 'Guided physical count kapag mag-iinventory. Makikita agad ang system-vs-actual na variance.' },
   { key: 'pricing_advisor', label: 'Margin & Pricing Advisor',     description: 'Per-product margin view at markup calculator. Fina-flag ang mga produktong sobrang nipis ang kita.' },
   { key: 'reports_pack',    label: 'Reports & Sulit Pack',         description: 'Daily Sulit (end-of-day summary), Monthly P&L (kita = benta − COGS − OPEX), at one-tap print/share ng buwanang report.' },
+  { key: 'vale_sahod',      label: 'Vale & Sahod ng Staff',        description: 'I-log ang bawat vale ng helper at auto-bawas sa sahod — malinaw ang computation, walang awayan, walang nakakalimutan.' },
+  { key: 'bodega_stock',    label: 'Bodega Stock',                 description: 'Hiwalay ang bilang ng nasa estante at nasa bodega. Kapag ubos sa display, sasabihin ng app kung may makukuha pa sa likod.' },
 ];
 
 /** Keys in `map` that are explicitly true. */
