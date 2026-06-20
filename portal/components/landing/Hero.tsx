@@ -7,9 +7,9 @@ import AppPreview from './AppPreview';
 export default function Hero() {
   return (
     <section className="relative pt-10 pb-16 sm:pt-16 sm:pb-24">
-      {/* decorative blobs */}
-      <div aria-hidden className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-pink/60 blur-3xl opacity-70" />
-      <div aria-hidden className="pointer-events-none absolute top-32 right-[-60px] h-80 w-80 rounded-full bg-accent-soft/55 blur-3xl opacity-70" />
+      {/* decorative blobs — mint + sky to match the Pharmacy Mint & Sky bg */}
+      <div aria-hidden className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-[#CFF5E7]/70 blur-3xl opacity-70" />
+      <div aria-hidden className="pointer-events-none absolute top-32 right-[-60px] h-80 w-80 rounded-full bg-[#BFE0FF]/65 blur-3xl opacity-70" />
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">

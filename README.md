@@ -6,13 +6,13 @@ Offline-first pharmacy audit tool for Filipino pharmacy staff. Sold for **₱249
 
 ```
 vendo/
-├── rxaudit-local.html       ← the PWA app (single file, self-contained)
+├── pharmetriks-local.html       ← the PWA app (single file, self-contained)
 ├── manifest.json            ← PWA manifest (also served from portal/public)
 ├── sw.js                    ← service worker
 ├── icons/                   ← SVG icon placeholders (replace with real art later)
 └── portal/                  ← Next.js 14 wrapper (landing, auth, admin, /app gate)
     ├── app/                 ← App Router pages and route handlers
-    │   ├── app/route.ts     ← serves rxaudit-local.html at /app
+    │   ├── app/route.ts     ← serves pharmetriks-local.html at /app
     │   └── api/verify-license/route.ts
     ├── lib/supabase/        ← server + browser Supabase clients
     ├── public/              ← copies of manifest.json, sw.js, icons/
@@ -21,7 +21,7 @@ vendo/
         └── seed-admin.ts              ← creates the first admin user
 ```
 
-The HTML at `rxaudit-local.html` is intentionally **never modified** by the portal — only wrapped. All pharmacy data stays in the user's browser (`localStorage`). The portal owns accounts, payment receipts, and license state only.
+The HTML at `pharmetriks-local.html` is intentionally **never modified** by the portal — only wrapped. All pharmacy data stays in the user's browser (`localStorage`). The portal owns accounts, payment receipts, and license state only.
 
 ## Build phases
 
@@ -85,7 +85,7 @@ npm run dev
 ```
 
 - `http://localhost:3000/` — placeholder landing page (Phase 3 will replace this)
-- `http://localhost:3000/app` — the Pharmetriks PWA, served from `rxaudit-local.html`
+- `http://localhost:3000/app` — the Pharmetriks PWA, served from `pharmetriks-local.html`
 - `http://localhost:3000/api/verify-license` — returns a stub for now (always-valid in dev)
 
 The service worker registers on first visit, caches the shell, and serves the app offline thereafter.

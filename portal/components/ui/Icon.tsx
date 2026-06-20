@@ -44,11 +44,11 @@ const PATHS: Record<IconName, React.ReactNode> = {
   ),
   'wifi-off': (
     <>
+      <path d="M3 9a14 14 0 0 1 18 0" />
+      <path d="M6 12.5a9 9 0 0 1 12 0" />
+      <path d="M9 16a4.5 4.5 0 0 1 6 0" />
+      <circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" />
       <line x1="3" y1="3" x2="21" y2="21" />
-      <path d="M16.5 12.4a6 6 0 0 0-7-1.4" />
-      <path d="M5 9a11 11 0 0 1 4-2" />
-      <path d="M20 8a15 15 0 0 0-3.5-2" />
-      <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" />
     </>
   ),
   lock: (

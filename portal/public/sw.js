@@ -8,17 +8,17 @@
  *
  * Bump SW_VERSION to roll out a new shell to existing installs.
  */
-const SW_VERSION    = 'pharmetriks-v1.0.11';
+const SW_VERSION    = 'pharmetriks-v1.0.13';
 const SHELL_CACHE   = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const FONTS_CACHE   = `${SW_VERSION}-fonts`;
 
 // The app currently lives at /app. We also precache the bare HTML file path
-// (rxaudit-local.html) for environments that serve it directly during dev.
+// (pharmetriks-local.html) for environments that serve it directly during dev.
 const APP_SHELL = [
   '/app',
   '/app/',
-  '/rxaudit-local.html',
+  '/pharmetriks-local.html',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon-maskable.svg',
@@ -110,7 +110,7 @@ async function networkFirstNavigation(req) {
   const cached =
     (await caches.match(req)) ||
     (await caches.match('/app')) ||
-    (await caches.match('/rxaudit-local.html'));
+    (await caches.match('/pharmetriks-local.html'));
   try {
     // If we already have a cached shell, only wait briefly for the network
     // before serving it. With no cache (first ever load) give it longer.

@@ -235,7 +235,7 @@
     .badge-violet { background: rgba(151,125,255,0.22); color: var(--ink-2); }
 
     /* Stat cards — glassy */
-    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-card {
       background: var(--glass-bg);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
@@ -1073,6 +1073,12 @@
             <span>Total</span>
             <span id="cartTotalAmt">₱0.00</span>
           </div>
+          <div id="ipautangSection" style="display:none;">
+            <label class="cust-label">Ipautang kay (suki)</label>
+            <select id="ipautangSuki" style="width:100%;margin-bottom:10px;">
+              <option value="">— Cash / walk-in —</option>
+            </select>
+          </div>
           <label class="cust-label">Customer (optional)</label>
           <input type="text" id="customerName" placeholder="Patient name…" style="width:100%;margin-bottom:10px;">
           <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="dispenseCart()"><svg class="ic ic-sm"><use href="#i-check"/></svg> Dispense</button>
@@ -1437,7 +1443,7 @@
   <div id="panel-insights" class="panel">
     <div class="section-header">
       <h2>Charts &amp; Insights</h2>
-      <p>Kita mo ang totoong lakad ng botika — benta, kita, at best sellers.</p>
+      <p>Takbo ng benta sa paglipas ng panahon at best sellers — alamin ang mabenta at kung kailan. (Para sa kita / P&amp;L, tingnan ang Reports &amp; Sulit.)</p>
     </div>
 
     <div class="insights-bar">
@@ -1492,7 +1498,8 @@
         <strong>Daily Sulit</strong>
         <div class="rep-controls">
           <input type="date" id="repDay" onchange="renderReports()">
-          <button class="btn btn-secondary btn-sm" onclick="printDailySulit()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Print</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadSampleReport()" title="Preview gamit ang sample data">Sample</button>
+          <button class="btn btn-primary btn-sm" onclick="downloadDailyReport()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Download PDF</button>
         </div>
       </div>
       <div class="stats-row" id="repDayKpis"></div>
@@ -1697,15 +1704,15 @@
     <input type="hidden" id="sukiEditId">
     <div class="form-group">
       <label>Pangalan *</label>
-      <input type="text" id="sukiName" placeholder="e.g. Aling Nena">
+      <input type="text" id="sukiName" placeholder="e.g. Aling Nena" autocomplete="off" autocapitalize="words" spellcheck="false">
     </div>
     <div class="form-group">
       <label>Numero (optional)</label>
-      <input type="text" id="sukiPhone" placeholder="e.g. 0917…">
+      <input type="text" id="sukiPhone" placeholder="e.g. 0917…" autocomplete="off" inputmode="tel">
     </div>
     <div class="form-group">
       <label>Note (optional)</label>
-      <input type="text" id="sukiNote" placeholder="e.g. kapitbahay, suki sa gamot ng anak">
+      <input type="text" id="sukiNote" placeholder="e.g. kapitbahay, suki sa gamot ng anak" autocomplete="off">
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeUtangModal('sukiModal')">Cancel</button>
@@ -2026,6 +2033,14 @@ function today() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// True if product p passes the category dropdown beside the given search bar.
+// Safe before the dropdowns are injected (no select = no filter).
+function catMatch(p, searchId) {
+  const sel = document.querySelector('.cat-filter[data-for="' + searchId + '"]');
+  const c = sel ? sel.value : '';
+  return !c || (p.category || '') === c;
+}
+
 // Generates a batch number like "B-20260423-A4F9"
 function genBatchNo() {
   const d = new Date();
@@ -2104,7 +2119,7 @@ let invData = dbLoad('inv');
 
 function expiryStatus(expiry_date) {
   if (!expiry_date) return null;
-  const exp = new Date(expiry_date + '-01');
+  const exp = new Date(expiry_date + '-01T00:00:00'); // local midnight (no 'Z') to match `now`
   const now = new Date(); now.setDate(1); now.setHours(0,0,0,0);
   const diffMs = exp - now;
   if (diffMs < 0) return 'expired';
@@ -2114,8 +2129,10 @@ function expiryStatus(expiry_date) {
 
 function renderInventory() {
   const q = (document.getElementById('invSearch').value || '').toLowerCase();
+  if (window.refreshCatFilters) window.refreshCatFilters(); // keep category options fresh
   const filtered = invData.filter(p =>
     [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f || '').toLowerCase().includes(q))
+    && catMatch(p, 'invSearch')
   );
 
   const tb = document.getElementById('invTable');
@@ -2222,9 +2239,15 @@ function renderSmartAlerts() {
     return `<li>${nameOf(p)} <span class="sa-meta">${p.qty} left · reorder @ ${reorderThreshold(p)}${inBodega > 0 ? ` · <b style="color:#0a8a3f">kunin sa bodega (${inBodega} pcs)</b>` : ''}</span></li>`;
   };
 
-  // Plain-text reorder list the owner can paste into a message to the supplier.
-  window._reorderText = reorder.length
-    ? reorder.map(p => `• ${(p.brand_name || p.generic_name || 'Item')}${p.dosage ? ' ' + p.dosage : ''} — ${p.qty} left (order to reach ${reorderThreshold(p)})`).join('\n')
+  // Supplier reorder list: only items where even WITH bodega stock you're still
+  // below reorder. Items covered by bodega still show in the alerts above
+  // ("kunin sa bodega") but must NOT go on the supplier order — otherwise you
+  // re-order stock you already have in the back and over-buy.
+  const bodegaOn = (typeof bodegaEnabled === 'function' && bodegaEnabled());
+  const totalQty = p => (Number(p.qty) || 0) + (bodegaOn ? (Number(p.bodega_qty) || 0) : 0);
+  const toReorder = reorder.filter(p => totalQty(p) <= reorderThreshold(p));
+  window._reorderText = toReorder.length
+    ? toReorder.map(p => `• ${(p.brand_name || p.generic_name || 'Item')}${p.dosage ? ' ' + p.dosage : ''} — ${totalQty(p)} left (order to reach ${reorderThreshold(p)})`).join('\n')
     : '';
 
   host.innerHTML =
@@ -2243,9 +2266,9 @@ function renderSmartAlerts() {
        ${block('Malapit nang mag-expire (90 araw)', '#d97706', near, expFmt)}
        ${block('Out of stock', '#dc2626', out, stockFmt)}
        ${block('Below reorder level', '#d97706', low, stockFmt)}
-       ${reorder.length ? `<div class="sa-reorder">
+       ${toReorder.length ? `<div class="sa-reorder">
             <div class="sa-reorder-head">
-              <strong>Reorder List (${reorder.length})</strong>
+              <strong>Reorder List (${toReorder.length})</strong>
               <button class="btn btn-secondary btn-sm" onclick="copyReorderList()">Copy list</button>
             </div>
             <pre class="sa-reorder-text">${esc(window._reorderText)}</pre>
@@ -2389,12 +2412,13 @@ function svgBars(buckets) {
 function renderInsightsKpis(k) {
   const el = document.getElementById('insightsKpis');
   if (!el) return;
+  // Insights = sales VOLUME + BEHAVIOR (kung ano't gaano karami ang nabenta).
+  // Profit / margin / P&L live in Reports & Sulit — kept separate on purpose.
   el.innerHTML =
-    `<div class="stat-card"><div class="slabel">Net Sales</div><div class="sval">${peso(k.netSales)}</div></div>
-     <div class="stat-card"><div class="slabel">Est. Kita</div><div class="sval ${k.grossProfit < 0 ? 'red' : ''}">${peso(k.grossProfit)}</div></div>
-     <div class="stat-card"><div class="slabel">Margin</div><div class="sval">${k.margin.toFixed(1)}%</div></div>
+    `<div class="stat-card"><div class="slabel">Benta</div><div class="sval">${peso(k.netSales)}</div></div>
+     <div class="stat-card"><div class="slabel">Units Nabenta</div><div class="sval">${k.units}</div></div>
      <div class="stat-card"><div class="slabel">Transactions</div><div class="sval">${k.txCount}</div></div>
-     <div class="stat-card"><div class="slabel">Avg Basket</div><div class="sval">${peso(k.avgBasket)}</div></div>`;
+     <div class="stat-card"><div class="slabel">Avg / Benta</div><div class="sval">${peso(k.avgBasket)}</div></div>`;
 }
 
 function renderInsightsTop(byProduct) {
@@ -2449,11 +2473,10 @@ function printInsightsReport() {
      <h1>Charts &amp; Insights</h1>
      <div class="sub">${periodLabel} · Na-print ${esc(new Date().toLocaleString('en-PH'))}</div>
      <div class="kpis">
-       <div class="k"><div class="l">Net Sales</div><div class="v">${peso(a.netSales)}</div></div>
-       <div class="k"><div class="l">Est. Kita</div><div class="v">${peso(a.grossProfit)}</div></div>
-       <div class="k"><div class="l">Margin</div><div class="v">${a.margin.toFixed(1)}%</div></div>
+       <div class="k"><div class="l">Benta</div><div class="v">${peso(a.netSales)}</div></div>
+       <div class="k"><div class="l">Units Nabenta</div><div class="v">${a.units}</div></div>
        <div class="k"><div class="l">Transactions</div><div class="v">${a.txCount}</div></div>
-       <div class="k"><div class="l">Avg Basket</div><div class="v">${peso(a.avgBasket)}</div></div>
+       <div class="k"><div class="l">Avg / Benta</div><div class="v">${peso(a.avgBasket)}</div></div>
      </div>
      <h3 style="font-size:14px;margin:0 0 4px">Top Sellers</h3>
      <table><thead><tr><th>#</th><th>Produkto</th><th style="text-align:right">Units</th><th style="text-align:right">Revenue</th><th style="text-align:right">Est. Kita</th></tr></thead>
@@ -2500,6 +2523,27 @@ function applyUtangVisibility() {
   if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
 }
 window.applyUtangVisibility = applyUtangVisibility;
+
+// ── Ipautang sa checkout: charge a dispense straight to a suki's ledger ──
+// Gated by the same utang_tracker entitlement; invisible to non-subscribers.
+function renderIpautangOptions() {
+  const sel = document.getElementById('ipautangSuki');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = ['<option value="">— Cash / walk-in —</option>'].concat(
+    sukiData.slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      .map(s => `<option value="${esc(s.id)}">${esc(s.name || 'Suki')}</option>`)
+  ).join('');
+  if (cur && sukiData.some(s => s.id === cur)) sel.value = cur; // keep selection
+}
+function applyIpautangVisibility() {
+  const sec = document.getElementById('ipautangSection');
+  const on = utangEnabled();
+  if (sec) sec.style.display = on ? '' : 'none';
+  if (on) renderIpautangOptions();
+}
+window.applyIpautangVisibility = applyIpautangVisibility;
 
 function renderUtang() {
   if (!utangEnabled()) return;
@@ -2568,6 +2612,7 @@ function saveSuki() {
   dbSave('suki', sukiData);
   closeUtangModal('sukiModal');
   renderUtang();
+  renderIpautangOptions();
   if (id && document.getElementById('sukiDetailModal').classList.contains('open')) openSukiDetail(id);
   toast(id ? 'Na-update ang suki.' : 'Naidagdag ang suki.');
 }
@@ -2587,6 +2632,7 @@ function deleteSuki(id) {
   dbSave('utang', utangData);
   closeUtangModal('sukiDetailModal');
   renderUtang();
+  renderIpautangOptions();
   toast('Nabura ang suki.');
 }
 
@@ -2793,6 +2839,311 @@ function printMonthlyPL() {
   openPrintWindow('Pharmetriks — Monthly P&L', body);
 }
 
+// ══════════════════ RICH DAILY REPORT → PDF (Pharmetriks-branded) ══════════════════
+// Computes a full daily snapshot from sales + inventory and renders it to a PDF.
+// Lazy-loads html2canvas + jsPDF on demand; falls back to a print window offline.
+
+function reportShopName() {
+  let n = '';
+  try { n = localStorage.getItem('pharmetriks_shop_name') || ''; } catch (e) {}
+  if (!n) {
+    n = (window.prompt('Pangalan ng botika (para sa report header):') || '').trim();
+    if (n) { try { localStorage.setItem('pharmetriks_shop_name', n); } catch (e) {} }
+  }
+  return n || 'Aking Botika';
+}
+
+function _prodKey(p) { return (p.generic_name || '') + '|' + (p.brand_name || '') + '|' + (p.dosage || ''); }
+
+function buildReportModel(dateStr) {
+  const day = dayReport(dateStr);
+  const prevD = new Date(dateStr + 'T00:00:00'); prevD.setDate(prevD.getDate() - 1);
+  const prev = dayReport(isoDate(prevD));
+  const pct = (cur, was) => was > 0 ? Math.round((cur - was) / was * 100) : (cur > 0 ? 100 : 0);
+
+  const topArr = Object.keys(day.byProduct).map(n => ({ n, q: day.byProduct[n] })).sort((a, b) => b.q - a.q);
+
+  // Last-sold date per product (from sales history) → movement classification.
+  const sold = {};
+  (salesData || []).forEach(t => (t.items || []).forEach(it => {
+    const k = (it.generic_name || '') + '|' + (it.brand_name || '') + '|' + (it.dosage || '');
+    if (!sold[k] || t.date > sold[k]) sold[k] = t.date;
+  }));
+  const baseD = new Date(dateStr + 'T00:00:00');
+  const daysSince = ds => ds ? Math.floor((baseD - new Date(ds + 'T00:00:00')) / 86400000) : Infinity;
+
+  let fastVal = 0, slowVal = 0, deadVal = 0, totalVal = 0;
+  const deadItems = [];
+  (invData || []).forEach(p => {
+    const val = (Number(p.qty) || 0) * (Number(p.cost) || 0);
+    totalVal += val;
+    const ds = daysSince(sold[_prodKey(p)]);
+    if (ds <= 7) fastVal += val;
+    else if (ds <= 30) slowVal += val;
+    else { deadVal += val; if ((Number(p.qty) || 0) > 0) deadItems.push(p); }
+  });
+
+  const expired = [], near = [];
+  (invData || []).forEach(p => {
+    const es = expiryStatus(p.expiry_date);
+    if (es === 'expired') expired.push(p);
+    else if (es === 'near') near.push(p);
+  });
+  const expiryLoss = expired.concat(near).reduce((s, p) => s + (Number(p.qty) || 0) * (Number(p.cost) || 0), 0);
+  const low = (invData || []).filter(p => (Number(p.qty) || 0) > 0 && (Number(p.qty) || 0) <= reorderThreshold(p));
+  const out = (invData || []).filter(p => (Number(p.qty) || 0) <= 0);
+
+  const days7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const dd = new Date(dateStr + 'T00:00:00'); dd.setDate(dd.getDate() - i);
+    days7.push({ date: isoDate(dd), label: (dd.getMonth() + 1) + '/' + dd.getDate(), value: dayReport(isoDate(dd)).net });
+  }
+  const weekAvg = days7.reduce((s, b) => s + b.value, 0) / 7;
+
+  const ym = dateStr.slice(0, 7);
+  const mtd = monthReport(ym).net;
+  const lmD = new Date(ym + '-01T00:00:00'); lmD.setMonth(lmD.getMonth() - 1);
+  const lastM = monthReport(isoDate(lmD).slice(0, 7)).net;
+  const goal = lastM > 0 ? lastM : (mtd > 0 ? mtd * 1.2 : 50000);
+
+  const clamp = x => Math.max(0, Math.min(100, Math.round(x)));
+  const deadPct = totalVal > 0 ? deadVal / totalVal : 0;
+  const sSales = clamp(weekAvg > 0 ? (day.net / weekAvg) * 60 + 20 : (day.net > 0 ? 70 : 30));
+  const sInv = clamp(100 - deadPct * 120 - (expiryLoss > 0 ? 15 : 0));
+  const sCash = clamp((totalVal > 0 ? fastVal / totalVal : 0) * 100);
+  const sGrowth = clamp(50 + pct(day.net, prev.net) / 2);
+  const score = Math.round((sSales + sInv + sCash + sGrowth) / 4);
+
+  return {
+    dateStr, shop: reportShopName(), generatedAt: new Date(),
+    sales: day.net, salesVsPrev: pct(day.net, prev.net),
+    profit: day.grossProfit, margin: day.net > 0 ? day.grossProfit / day.net * 100 : 0,
+    expenses: day.expenses, tx: day.txCount, txVsPrev: pct(day.txCount, prev.txCount),
+    top: topArr[0] || null,
+    totalVal, fastVal, slowVal, deadVal, deadPct, deadItems, deadCount: deadItems.length,
+    expired, near, expiryLoss, low, out,
+    days7, weekAvg, mtd, goal, goalPct: goal > 0 ? Math.min(100, Math.round(mtd / goal * 100)) : 0,
+    score, sSales, sInv, sCash, sGrowth,
+  };
+}
+
+function _loadScript(src) {
+  return new Promise(function (res, rej) {
+    if (Array.prototype.some.call(document.scripts, function (s) { return s.src === src; })) return res();
+    var s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = function () { rej(new Error('load ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+
+async function _renderReportPdf(m, filename) {
+  const html = reportHtml(m);
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-99999px;top:0;width:794px;background:#fff;z-index:-1;';
+  holder.innerHTML = html;
+  document.body.appendChild(holder);
+  toast('Ginagawa ang PDF…');
+  try {
+    await _loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    await _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const canvas = await window.html2canvas(holder.firstElementChild, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+    const img = canvas.toDataURL('image/png');
+    // Always fit the whole report onto ONE A4 page (contain). Never paginate.
+    const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+    const w = canvas.width * ratio, h = canvas.height * ratio;
+    pdf.addImage(img, 'PNG', (pw - w) / 2, 0, w, h);
+    pdf.save(filename);
+    toast('Na-download ang report ✓');
+  } catch (e) {
+    // Offline or CDN blocked → open the styled report in a window to print/save.
+    const w = window.open('', '_blank');
+    if (w) { w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Pharmetriks Daily Report</title></head><body style="margin:0">' + html + '</body></html>'); w.document.close(); w.focus(); setTimeout(function () { try { w.print(); } catch (e) {} }, 400); }
+    else toast('I-allow ang pop-up para sa report.', 'error');
+  } finally {
+    document.body.removeChild(holder);
+  }
+}
+
+async function downloadDailyReport() {
+  const dateStr = (document.getElementById('repDay') && document.getElementById('repDay').value) || today();
+  return _renderReportPdf(buildReportModel(dateStr), 'Pharmetriks-Daily-Report-' + dateStr + '.pdf');
+}
+window.downloadDailyReport = downloadDailyReport;
+
+// Preview the report with realistic SAMPLE data — never touches real inventory/
+// sales, so it's safe to run on the live (synced) app.
+function buildSampleModel() {
+  const fp = (g, b, d, q) => ({ generic_name: g, brand_name: b, dosage: d, qty: q, cost: 5 });
+  return {
+    dateStr: today(), shop: 'MJ Drugmart (Sample)', generatedAt: new Date(),
+    sales: 7238.76, salesVsPrev: 60, profit: 3345.16, margin: 46.2,
+    expenses: 1240, tx: 52, txVsPrev: 33,
+    top: { n: 'Losartan 50mg (Natrasol)', q: 70 },
+    totalVal: 426491.29, fastVal: 208868.96, slowVal: 83429.62, deadVal: 67938.42, deadPct: 0.189,
+    deadCount: 416, deadItems: [fp('Deodorant', 'Rexona', 'Shower Clean', 4)],
+    expired: [fp('Montelukast Sodium', 'Aurohex', '10mg', 57)], near: [], expiryLoss: 139.08,
+    low: [fp('Vitamins Chlorella', 'Propan', 'TLC drops', 1), fp('Ibuprofen', 'Penfro', '', 2), fp('Deodorant', 'Rexona', 'Shower Clean', 4)],
+    out: [],
+    days7: [
+      { label: '4/24', value: 7528 }, { label: '4/25', value: 6287 }, { label: '4/26', value: 1477 },
+      { label: '4/27', value: 4536 }, { label: '4/28', value: 5102 }, { label: '4/29', value: 6890 }, { label: '4/30', value: 7238.76 },
+    ],
+    weekAvg: 5579.82, mtd: 124000, goal: 210000, goalPct: 59,
+    score: 56, sSales: 78, sInv: 42, sCash: 58, sGrowth: 66,
+  };
+}
+async function downloadSampleReport() {
+  return _renderReportPdf(buildSampleModel(), 'Pharmetriks-Sample-Report.pdf');
+}
+window.downloadSampleReport = downloadSampleReport;
+
+// The styled report markup (self-contained: <style> + content). Used for both the
+// html2canvas → PDF path and the offline print-window fallback.
+function reportHtml(m) {
+  const peso0 = v => peso(v);
+  const delta = p => p === 0 ? '<span style="color:#94a3b8">—</span>'
+    : p > 0 ? '<span style="color:#16a34a;font-weight:700">▲ ' + p + '%</span>'
+            : '<span style="color:#dc2626;font-weight:700">▼ ' + Math.abs(p) + '%</span>';
+
+  // donut for cash-flow movement
+  const segs = [
+    { val: m.fastVal, color: '#16a34a', label: 'Fast moving' },
+    { val: m.slowVal, color: '#f59e0b', label: 'Slow moving' },
+    { val: m.deadVal, color: '#dc2626', label: 'Dead stock' },
+  ];
+  const total = segs.reduce((s, x) => s + x.val, 0) || 1;
+  const C = 2 * Math.PI * 52;
+  let off = 0, arcs = '';
+  segs.forEach(s => {
+    const frac = s.val / total;
+    arcs += '<circle cx="70" cy="70" r="52" fill="none" stroke="' + s.color + '" stroke-width="17" stroke-dasharray="' + (frac * C).toFixed(2) + ' ' + C.toFixed(2) + '" stroke-dashoffset="' + (-off * C).toFixed(2) + '" transform="rotate(-90 70 70)"/>';
+    off += frac;
+  });
+  const donut = '<svg width="104" height="104" viewBox="0 0 140 140">' + arcs +
+    '<text x="70" y="64" text-anchor="middle" font-size="10" fill="#94a3b8">Total Stock</text>' +
+    '<text x="70" y="82" text-anchor="middle" font-size="13" font-weight="800" fill="#1e0a47">' + peso0(m.totalVal) + '</text></svg>';
+
+  // score ring
+  const SR = 2 * Math.PI * 46;
+  const scoreColor = m.score >= 70 ? '#16a34a' : m.score >= 45 ? '#d97706' : '#dc2626';
+  const ring = '<svg width="92" height="92" viewBox="0 0 120 120">' +
+    '<circle cx="60" cy="60" r="46" fill="none" stroke="#eef2f7" stroke-width="11"/>' +
+    '<circle cx="60" cy="60" r="46" fill="none" stroke="' + scoreColor + '" stroke-width="11" stroke-linecap="round" stroke-dasharray="' + (m.score / 100 * SR).toFixed(1) + ' ' + SR.toFixed(1) + '" transform="rotate(-90 60 60)"/>' +
+    '<text x="60" y="58" text-anchor="middle" font-size="26" font-weight="800" fill="#1e0a47">' + m.score + '</text>' +
+    '<text x="60" y="76" text-anchor="middle" font-size="10" fill="#94a3b8">/100</text></svg>';
+
+  // sales bars
+  const maxV = Math.max.apply(null, m.days7.map(d => d.value).concat([1]));
+  const bw = 44, bh = 78, gap = 7;
+  let bars = '';
+  m.days7.forEach((d, i) => {
+    const h = Math.max((d.value / maxV) * (bh - 26), 2);
+    const isToday = i === m.days7.length - 1;
+    const x = i * (bw + gap) + 6;
+    bars += '<rect x="' + x + '" y="' + (bh - h) + '" width="' + bw + '" height="' + h.toFixed(1) + '" rx="5" fill="' + (isToday ? '#0033FF' : '#c7d2fe') + '"/>' +
+      '<text x="' + (x + bw / 2) + '" y="' + (bh + 13) + '" text-anchor="middle" font-size="10" fill="#94a3b8">' + d.label + '</text>';
+  });
+  const barsSvg = '<svg width="' + (m.days7.length * (bw + gap) + 6) + '" height="98" style="max-width:100%">' + bars + '</svg>';
+
+  const scoreLabel = s => s >= 70 ? 'Good' : s >= 45 ? 'Fair' : 'Needs work';
+  const subRow = (label, s) => '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px"><span style="color:#475569">' + label + '</span><b style="color:' + (s >= 70 ? '#16a34a' : s >= 45 ? '#d97706' : '#dc2626') + '">' + scoreLabel(s) + ' · ' + s + '</b></div>';
+
+  const liItems = (arr, fn) => arr.slice(0, 3).map(fn).join('') || '<div style="font-size:11.5px;color:#94a3b8">wala</div>';
+  const nameOf = p => (p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + p.dosage : '');
+
+  // business insight + recommendation (data-driven)
+  let insight, recommend;
+  if (m.salesVsPrev > 0) insight = 'Tumaas ang benta mo ngayon (' + delta(m.salesVsPrev).replace(/<[^>]+>/g, '') + ' vs kahapon). ';
+  else if (m.salesVsPrev < 0) insight = 'Bumaba ang benta ngayon kumpara kahapon. ';
+  else insight = 'Pareho ng kahapon ang benta. ';
+  if (m.deadPct > 0.15) insight += 'May ' + Math.round(m.deadPct * 100) + '% ng puhunan mo (' + peso0(m.deadVal) + ') na nakatengga sa dead stock.';
+  else insight += 'Maayos ang takbo ng stock mo.';
+  if (m.expiryLoss > 0) recommend = 'I-discount o i-promo agad ang ' + (m.expired.length + m.near.length) + ' produktong malapit nang mag-expire (panganib: ' + peso0(m.expiryLoss) + ').';
+  else if (m.deadPct > 0.15) recommend = 'Mag-10–20% discount sa dead stock para maging cash ang ~' + peso0(m.deadVal / 2) + ' na nakatengga.';
+  else if (m.low.length) recommend = 'I-restock ang ' + m.low.length + ' mabentang item bago maubos para walang missed sales.';
+  else recommend = 'Tuloy lang — maganda ang lakad. Subukang dagdagan ang mabentang items.';
+
+  const card = (bg, accent, label, big, sub) =>
+    '<div style="flex:1;min-width:0;background:' + bg + ';border:1px solid ' + accent + '22;border-radius:11px;padding:8px 11px">' +
+    '<div style="font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:' + accent + '">' + label + '</div>' +
+    '<div style="font-size:18px;font-weight:800;color:#1e0a47;margin-top:2px">' + big + '</div>' +
+    (sub ? '<div style="font-size:10px;color:#64748b;margin-top:1px">' + sub + '</div>' : '') + '</div>';
+
+  const sectionHead = (icon, title) => '<div style="display:flex;align-items:center;gap:6px;margin:9px 2px 5px"><span style="font-size:12px">' + icon + '</span><b style="font-size:11px;letter-spacing:.3px;color:#1e0a47;text-transform:uppercase">' + title + '</b></div>';
+
+  return '' +
+  '<style>.rpt *{box-sizing:border-box;font-family:"Plus Jakarta Sans",system-ui,Arial,sans-serif}</style>' +
+  '<div class="rpt" style="width:794px;background:#f7f8fc;color:#1e0a47;padding:13px 18px">' +
+
+    // Header
+    '<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e7e9f5;padding-bottom:9px">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0033FF,#977DFF);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px">Rx</div>' +
+        '<div><div style="font-weight:800;font-size:16px;letter-spacing:-.3px">Pharmetriks</div><div style="font-size:10px;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">Pharmacy Management</div></div>' +
+      '</div>' +
+      '<div style="text-align:center"><div style="font-size:22px;font-weight:800;letter-spacing:1px;color:#00128a">DAILY REPORT</div><div style="font-size:12px;font-weight:700;color:#7c3aed">' + esc(m.shop) + '</div></div>' +
+      '<div style="text-align:right;font-size:11px;color:#64748b"><div style="font-weight:700;color:#1e0a47">' + esc(new Date(m.dateStr + "T00:00:00").toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })) + '</div><div>Generated ' + esc(m.generatedAt.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })) + '</div></div>' +
+    '</div>' +
+
+    // The money line
+    sectionHead('💰', 'The Money Line') +
+    '<div style="display:flex;gap:10px">' +
+      card('#eff6ff', '#0033FF', "Today's Sales", peso0(m.sales), delta(m.salesVsPrev) + ' vs kahapon' + (m.top ? ' · Top: ' + esc(m.top.n) + ' (' + m.top.q + ')' : '')) +
+      card('#ecfdf5', '#16a34a', 'Est. Profit', peso0(m.profit), 'Margin ' + m.margin.toFixed(1) + '%') +
+      card('#fdf4ff', '#a21caf', 'Goal (vs last month)', m.goalPct + '%', peso0(m.mtd) + ' / ' + peso0(m.goal)) +
+      card('#eef2ff', '#4f46e5', 'Transactions', String(m.tx), delta(m.txVsPrev) + ' vs kahapon') +
+    '</div>' +
+
+    // Take action today
+    sectionHead('⚠️', 'Take Action Today') +
+    '<div style="display:flex;gap:10px">' +
+      '<div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:13px 15px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#dc2626">1 · Sell now (expiry)</div>' + (m.expired.length + m.near.length ? '<div style="font-size:13px;font-weight:700;margin-top:4px">' + esc(nameOf(m.expired.concat(m.near)[0])) + '</div><div style="font-size:11px;color:#64748b">' + (m.expired.length + m.near.length) + ' item · panganib ' + peso0(m.expiryLoss) + '</div>' : '<div style="font-size:12px;color:#16a34a;margin-top:4px">Walang malapit mag-expire ✓</div>') + '</div>' +
+      '<div style="flex:1;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:13px 15px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#d97706">2 · Restock urgently</div><div style="font-size:11.5px;margin-top:4px;line-height:1.7">' + liItems(m.low.concat(m.out), p => '<div>• ' + esc(nameOf(p)) + ' <span style="color:#94a3b8">(' + (Number(p.qty) || 0) + ' left)</span></div>') + '</div></div>' +
+      '<div style="flex:1;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:13px 15px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#7c3aed">3 · Free up cash</div><div style="font-size:20px;font-weight:800;margin-top:4px">' + m.deadCount + ' items</div><div style="font-size:11px;color:#64748b">' + peso0(m.deadVal) + ' dead stock (30+ araw)</div></div>' +
+    '</div>' +
+
+    // Cash flow + losses
+    '<div style="display:flex;gap:12px;margin-top:6px">' +
+      '<div style="flex:1;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:9px 11px">' + sectionHead('🩺', 'Cash Flow Snapshot').replace('margin:9px 2px 5px', 'margin:0 0 6px') +
+        '<div style="display:flex;align-items:center;gap:14px">' + donut +
+          '<div style="font-size:12px;line-height:1.9">' +
+            '<div><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#16a34a;margin-right:6px"></span>Fast <b>' + peso0(m.fastVal) + '</b></div>' +
+            '<div><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:6px"></span>Slow <b>' + peso0(m.slowVal) + '</b></div>' +
+            '<div><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#dc2626;margin-right:6px"></span>Dead <b>' + peso0(m.deadVal) + '</b></div>' +
+          '</div></div>' +
+        '<div style="margin-top:10px;font-size:11px;color:#475569;background:#f8fafc;border-radius:8px;padding:8px 10px">' + Math.round(m.deadPct * 100) + '% ng puhunan ay nasa dead/slow stock. Kung mababawasan ito ng kalahati, ~<b>' + peso0(m.deadVal / 2) + '</b> ang mabubuong cash.</div></div>' +
+      '<div style="flex:1;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:9px 11px">' + sectionHead('🛡️', 'Losses & Risks').replace('margin:9px 2px 5px', 'margin:0 0 6px') +
+        '<div style="font-size:12.5px"><div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9"><span>⏳ Expiry risk · ' + (m.expired.length + m.near.length) + ' item</span><b style="color:#dc2626">' + peso0(m.expiryLoss) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9"><span>💀 Dead stock · ' + m.deadCount + ' item</span><b style="color:#dc2626">' + peso0(m.deadVal) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:9px 0"><span>📉 Low / out of stock</span><b style="color:#d97706">' + (m.low.length + m.out.length) + ' item</b></div></div></div>' +
+    '</div>' +
+
+    // Sales performance + insight
+    '<div style="display:flex;gap:12px;margin-top:7px">' +
+      '<div style="flex:1.2;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:9px 11px">' + sectionHead('📊', 'Sales Performance (7 araw)').replace('margin:18px 2px 9px', 'margin:0 0 6px') +
+        '<div style="overflow:hidden">' + barsSvg + '</div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:11.5px;color:#64748b;margin-top:6px"><span>Ngayon: <b style="color:#0033FF">' + peso0(m.sales) + '</b></span><span>Week avg: <b>' + peso0(m.weekAvg) + '</b></span></div></div>' +
+      '<div style="flex:1;display:flex;flex-direction:column;gap:10px">' +
+        '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#0033FF">💡 Business Insight</div><div style="font-size:11.5px;color:#1e3a8a;margin-top:5px;line-height:1.55">' + insight + '</div></div>' +
+        '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#059669">✅ Today\'s Recommendation</div><div style="font-size:11.5px;color:#065f46;margin-top:5px;line-height:1.55">' + recommend + '</div></div>' +
+    '</div></div>' +
+
+    // Score
+    '<div style="display:flex;gap:14px;align-items:center;margin-top:12px;background:#fff;border:1px solid #eef2f7;border-radius:11px;padding:9px 11px 18px">' +
+      '<div style="text-align:center">' + ring + '<div style="font-size:11px;font-weight:800;color:#1e0a47;margin-top:2px">PHARMETRIKS SCORE</div></div>' +
+      '<div style="flex:1">' + subRow('Sales Performance', m.sSales) + subRow('Inventory Health', m.sInv) + subRow('Cash Efficiency', m.sCash) + subRow('Growth Potential', m.sGrowth) + '</div>' +
+    '</div>' +
+
+    // Footer
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px;padding-top:7px;border-top:1px solid #e7e9f5;font-size:10px;color:#94a3b8">' +
+      '<span>Pharmetriks · pharmetriks.vercel.app</span><span style="font-style:italic">Maliliit na araw-araw na hakbang, malaking kita.</span><span>Your success is our mission.</span>' +
+    '</div>' +
+  '</div>';
+}
+
 // ══════════════════ PRICE LIST / CATALOG (add-on: 'price_list') ══════════════════
 function priceListEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('price_list')); }
 
@@ -2806,7 +3157,7 @@ function priceListItems() {
   const s = document.getElementById('priceListSearch');
   const q = (s && s.value || '').toLowerCase();
   return (invData || [])
-    .filter(p => [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f || '').toLowerCase().includes(q)))
+    .filter(p => [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f || '').toLowerCase().includes(q)) && catMatch(p, 'priceListSearch'))
     .slice()
     .sort((a, b) => (a.generic_name || '').localeCompare(b.generic_name || ''));
 }
@@ -2888,7 +3239,7 @@ function renderPricingTable() {
   const s = document.getElementById('pricingSearch');
   const q = (s && s.value || '').toLowerCase();
   const rows = (invData || [])
-    .filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)))
+    .filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)) && catMatch(p, 'pricingSearch'))
     .map(p => {
       const price = Number(p.price) || 0, cost = Number(p.cost) || 0;
       const hasCost = cost > 0;
@@ -2954,7 +3305,7 @@ function renderAuditList() {
   if (!host) return;
   const s = document.getElementById('auditSearch');
   const q = (s && s.value || '').toLowerCase();
-  const items = (invData || []).filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)));
+  const items = (invData || []).filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)) && catMatch(p, 'auditSearch'));
   if (!items.length) { host.innerHTML = '<div class="ins-empty">Walang produkto.</div>'; return; }
   host.innerHTML = items.map(p => {
     const name = esc(p.brand_name || p.generic_name || 'Item') + (p.dosage && p.dosage !== 'N/A' ? ' ' + esc(p.dosage) : '');
@@ -3485,7 +3836,7 @@ function renderBodegaList() {
   if (!host) return;
   const s = document.getElementById('bodegaSearch');
   const q = (s && s.value || '').toLowerCase();
-  const items = (invData || []).filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)));
+  const items = (invData || []).filter(p => [p.generic_name, p.brand_name, p.dosage].some(f => (f || '').toLowerCase().includes(q)) && catMatch(p, 'bodegaSearch'));
   const sum = document.getElementById('bodegaSummary');
   if (sum) {
     const withBodega = (invData || []).filter(p => (Number(p.bodega_qty) || 0) > 0);
@@ -3673,9 +4024,19 @@ function parseCSVText(text) {
 function findColIdx(headers, aliases) {
   const normalized = headers.map(h => h.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim());
   for (let i = 0; i < normalized.length; i++) {
+    // Skip blank header cells (e.g. trailing comma) — '' would match every
+    // alias via a.includes('') and steal the column from the real header.
+    if (!normalized[i]) continue;
     if (aliases.some(a => normalized[i] === a || normalized[i].includes(a) || a.includes(normalized[i]))) return i;
   }
   return -1;
+}
+
+// Strip currency symbols, thousands separators, and stray spaces before parsing
+// a numeric CSV cell — otherwise "₱1,250.00" or "1,000" truncates at the comma
+// (parseInt('1,000') === 1) and silently corrupts imported prices/quantities.
+function csvNum(v) {
+  return String(v == null ? '' : v).replace(/[₱$,\s]/g, '');
 }
 
 function handleInvImportFile(e) {
@@ -3721,8 +4082,8 @@ function handleInvImportFile(e) {
       const r = rows[i];
       const generic = (r[idx.generic] || '').trim();
       const brand   = (r[idx.brand]   || '').trim();
-      const qty     = parseInt(r[idx.qty]);
-      const price   = parseFloat(r[idx.price]);
+      const qty     = parseInt(csvNum(r[idx.qty]), 10);
+      const price   = parseFloat(csvNum(r[idx.price]));
 
       if (!generic || !brand) { errors.push(`Row ${i + 1}: missing generic or brand name.`); continue; }
       if (isNaN(qty) || qty < 0) { errors.push(`Row ${i + 1}: invalid quantity.`); continue; }
@@ -3741,10 +4102,10 @@ function handleInvImportFile(e) {
         expiry_date:  (idx.expiry   >= 0 ? r[idx.expiry]   : '').trim(),
         qty,
         price,
-        cost:         idx.cost     >= 0 ? (parseFloat(r[idx.cost]) || 0) : 0,
+        cost:         idx.cost     >= 0 ? (parseFloat(csvNum(r[idx.cost])) || 0) : 0,
         supplier:     (idx.supplier >= 0 ? r[idx.supplier] : '').trim(),
         category:     (idx.category >= 0 ? r[idx.category] : '').trim(),
-        reorder_level: reorderRaw === '' ? null : (parseInt(reorderRaw) || 0),
+        reorder_level: reorderRaw === '' ? null : (parseInt(csvNum(reorderRaw), 10) || 0),
         rx_required:  rxVal,
         barcode:      (idx.barcode  >= 0 ? r[idx.barcode]  : '').trim(),
         remarks:      (idx.remarks  >= 0 ? r[idx.remarks]  : '').trim(),
@@ -3851,7 +4212,7 @@ function getCustomerName() {
 function renderProductList() {
   const q = (document.getElementById('productSearch').value || '').toLowerCase();
   const products = invData
-    .filter(p => p.qty > 0 && [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f||'').toLowerCase().includes(q)))
+    .filter(p => p.qty > 0 && [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f||'').toLowerCase().includes(q)) && catMatch(p, 'productSearch'))
     .sort((a, b) => a.generic_name.localeCompare(b.generic_name));
 
   const el = document.getElementById('productList');
@@ -4003,6 +4364,7 @@ function renderCart() {
   document.getElementById('cartTotalAmt').textContent = peso(gross - d.amount);
   updateDiscountRows(gross, d);
   applyDiscountVisibility();
+  applyIpautangVisibility();
   footerEl.style.display = '';
   emptyFtEl.style.display = 'none';
 }
@@ -4013,10 +4375,17 @@ function dispenseCart() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const orderNum = `ORD-${now.getFullYear().toString().slice(-2)}${pad(now.getMonth()+1)}${pad(now.getDate())}-${String(Date.now()).slice(-4)}`;
-  const customer = getCustomerName();
   const gross = cart.reduce((s, c) => s + c.price * c.qty, 0);
   const disc = computeDiscount(gross);
   const total = gross - disc.amount;
+
+  // Optional "ipautang" — charge this sale to a suki's utang ledger. Gated by
+  // the utang_tracker add-on; for non-subscribers the selector is hidden/absent
+  // so utangSuki stays null and this behaves exactly like a normal cash sale.
+  const ipautangEl = utangEnabled() ? document.getElementById('ipautangSuki') : null;
+  const utangSuki = (ipautangEl && ipautangEl.value)
+    ? sukiData.find(s => s.id === ipautangEl.value) : null;
+  const customer = getCustomerName() || (utangSuki ? utangSuki.name : '');
 
   for (const item of cart) {
     const p = invData.find(x => x.id === item.product_id);
@@ -4033,21 +4402,34 @@ function dispenseCart() {
     total, gross_total: gross,
     discount_type: disc.type, discount_mode: disc.mode,
     discount_value: disc.value, discount_amount: disc.amount,
+    suki_id: utangSuki ? utangSuki.id : null,
     created_at: now.toISOString(), updated_at: now.toISOString(),
   };
   salesData.unshift(tx);
   dbSave('sales', salesData);
 
+  // Mirror a credit sale into the suki's ledger as a 'charge' for the net total.
+  if (utangSuki && total > 0) {
+    const nowISO = now.toISOString();
+    utangData.push({ id: uid(), suki_id: utangSuki.id, kind: 'charge', amount: total,
+      date: today(), note: `Dispense ${orderNum}`, created_at: nowISO, updated_at: nowISO });
+    dbSave('utang', utangData);
+    if (typeof renderUtang === 'function') renderUtang();
+  }
+
   cart = [];
   document.getElementById('customerName').value = '';
   document.getElementById('customerName2').value = '';
   resetDiscountInputs();
+  if (ipautangEl) ipautangEl.value = '';
   renderCart();
   renderSales();
   renderProductList();
   renderOpexStats();
   renderSalesLog();
-  toast(`Dispensed ${orderNum} — ${peso(total)}`);
+  toast(utangSuki
+    ? `Inutang ni ${utangSuki.name}: ${peso(total)} — ${orderNum}`
+    : `Dispensed ${orderNum} — ${peso(total)}`);
 }
 
 function renderSales() {
@@ -4232,6 +4614,7 @@ window.PHARMETRIKS_APPLY = function (key, arr) {
   } else if (key === 'suki') {
     sukiData = arr;
     if (typeof renderUtang === 'function') renderUtang();
+    if (typeof renderIpautangOptions === 'function') renderIpautangOptions();
   } else if (key === 'utang') {
     utangData = arr;
     if (typeof renderUtang === 'function') renderUtang();
@@ -4265,7 +4648,7 @@ function renderSalesLog() {
   }
 
   if (!sorted.length) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="5">No sales in this period.</td></tr>`;
+    tb.innerHTML = `<tr class="empty-row"><td colspan="6">No sales in this period.</td></tr>`;
     return;
   }
 
@@ -4283,13 +4666,13 @@ function renderSalesLog() {
 
   if (sorted.length > salesLogLimit) {
     const remaining = sorted.length - salesLogLimit;
-    html += `<tr class="see-more-row"><td colspan="5">
+    html += `<tr class="see-more-row"><td colspan="6">
       <button class="see-more-btn" onclick="salesLogLimit += 10; renderSalesLog();">
         See more (${remaining} remaining) <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-down"/></svg>
       </button>
     </td></tr>`;
   } else if (salesLogLimit > 10 && sorted.length > 10) {
-    html += `<tr class="see-more-row"><td colspan="5">
+    html += `<tr class="see-more-row"><td colspan="6">
       <button class="see-more-btn" onclick="salesLogLimit = 10; renderSalesLog();">
         Show less <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-up"/></svg>
       </button>
@@ -4700,6 +5083,92 @@ window.addEventListener('scroll', () => { if (tourActive) positionTour(); }, tru
 if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   setTimeout(startTour, 500);
 }
+
+// ════ UI polish: no autofill on add/edit fields + a clear-✕ on every search bar ════
+// One pass over the whole document, so it also covers any search bar added later.
+(function () {
+  // 1) Kill browser autofill (contacts/address dropdowns) on form fields.
+  //    Search bars are excluded by their `*Search` id.
+  document.querySelectorAll('input, textarea').forEach(el => {
+    if (el.id && /Search$/.test(el.id)) return;
+    el.setAttribute('autocomplete', 'off');
+  });
+
+  // 2) Styles for the clear button (injected once, self-contained).
+  var st = document.createElement('style');
+  st.textContent =
+    '.search-wrap{position:relative;display:inline-flex;align-items:center}' +
+    '.search-wrap>input{width:100%}' +
+    '.search-wrap.show-clear>input{padding-right:30px}' +
+    '.search-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:none;' +
+    'border:none;background:transparent;color:#94a3b8;font-size:13px;line-height:1;cursor:pointer;' +
+    'padding:4px 5px;border-radius:50%}' +
+    '.search-clear:hover{color:#475569;background:rgba(100,116,139,.14)}' +
+    '.search-wrap.show-clear .search-clear{display:inline-flex}' +
+    '.cat-filter{margin:8px 8px 0 0;padding:7px 9px;border-radius:8px;' +
+    'border:1px solid rgba(151,125,255,.3);background:rgba(255,255,255,.72);' +
+    'font-size:12.5px;font-weight:600;color:#1e0a47;max-width:220px;vertical-align:middle}';
+  document.head.appendChild(st);
+
+  // 3) Wrap each search input + add a clear button that empties it, refocuses,
+  //    and re-fires the input's existing oninput render. Future-proof: any input
+  //    whose id ends in "Search" is enhanced automatically.
+  document.querySelectorAll('input[id$="Search"]').forEach(function (input) {
+    if (input.closest('.search-wrap')) return;
+    var wrap = document.createElement('span');
+    wrap.className = 'search-wrap';
+    var s = input.style; // carry the input's layout role onto the wrapper
+    if (s.flex)         { wrap.style.flex = s.flex;                 input.style.flex = ''; }
+    if (s.width)        { wrap.style.width = s.width;               input.style.width = '100%'; }
+    if (s.minWidth)     { wrap.style.minWidth = s.minWidth;         input.style.minWidth = ''; }
+    if (s.marginBottom) { wrap.style.marginBottom = s.marginBottom; input.style.marginBottom = ''; }
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'search-clear';
+    btn.setAttribute('aria-label', 'Clear');
+    btn.textContent = '✕';
+    btn.addEventListener('click', function () {
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      wrap.classList.remove('show-clear');
+    });
+    wrap.appendChild(btn);
+
+    var toggle = function () { wrap.classList.toggle('show-clear', !!input.value); };
+    input.addEventListener('input', toggle);
+    toggle();
+  });
+
+  // 4) Category dropdown beside each PRODUCT search bar. Changing it re-fires the
+  //    bar's existing render (which now also calls catMatch). Options are filled
+  //    from the distinct categories in inventory, refreshed on inventory changes.
+  var CAT_BARS = ['invSearch', 'productSearch', 'priceListSearch', 'pricingSearch', 'auditSearch', 'bodegaSearch'];
+  CAT_BARS.forEach(function (id) {
+    var input = document.getElementById(id);
+    if (!input) return;
+    var anchor = input.closest('.search-wrap') || input;
+    var sel = document.createElement('select');
+    sel.className = 'cat-filter';
+    sel.setAttribute('data-for', id);
+    sel.addEventListener('change', function () { input.dispatchEvent(new Event('input', { bubbles: true })); });
+    anchor.parentNode.insertBefore(sel, anchor.nextSibling);
+  });
+  window.refreshCatFilters = function () {
+    var cats = Array.from(new Set((invData || [])
+      .map(function (p) { return (p.category || '').trim(); }).filter(Boolean))).sort();
+    document.querySelectorAll('.cat-filter').forEach(function (sel) {
+      var cur = sel.value;
+      sel.innerHTML = '<option value="">Lahat ng category</option>' +
+        cats.map(function (c) { return '<option value="' + c.replace(/"/g, '&quot;') + '">' + c + '</option>'; }).join('');
+      if (cats.indexOf(cur) >= 0) sel.value = cur;
+    });
+  };
+  refreshCatFilters();
+})();
 </script>
 
 <!-- ══════════════════════ PWA BOOTSTRAP + LICENSE CHECK ══════════════════════ -->
@@ -4887,6 +5356,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.renderSmartAlerts) window.renderSmartAlerts();
         if (window.applyInsightsVisibility) window.applyInsightsVisibility();
         if (window.applyUtangVisibility) window.applyUtangVisibility();
+        if (window.applyIpautangVisibility) window.applyIpautangVisibility();
         if (window.applyReportsVisibility) window.applyReportsVisibility();
         if (window.applyPriceListVisibility) window.applyPriceListVisibility();
         if (window.applyPricingVisibility) window.applyPricingVisibility();
@@ -4941,6 +5411,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     if (window.applyDiscountVisibility) window.applyDiscountVisibility();
     if (window.applyInsightsVisibility) window.applyInsightsVisibility();
     if (window.applyUtangVisibility) window.applyUtangVisibility();
+    if (window.applyIpautangVisibility) window.applyIpautangVisibility();
     if (window.applyReportsVisibility) window.applyReportsVisibility();
     if (window.applyPriceListVisibility) window.applyPriceListVisibility();
     if (window.applyPricingVisibility) window.applyPricingVisibility();

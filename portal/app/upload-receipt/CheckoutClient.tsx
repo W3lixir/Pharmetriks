@@ -7,7 +7,7 @@ import { useState } from 'react';
 import GcashCard from './GcashCard';
 import AddonPicker from './AddonPicker';
 import UploadForm from './UploadForm';
-import { FEATURES, type FeatureMap } from '@/lib/features';
+import { FEATURES, featureActive, type FeatureMap } from '@/lib/features';
 import { APP_PRICE_PHP, ADDON_PRICE_PHP, peso } from '@/lib/pricing';
 
 type Props = {
@@ -30,13 +30,13 @@ export default function CheckoutClient({
   const [selected, setSelected] = useState<FeatureMap>(() => {
     const out: FeatureMap = {};
     for (const f of FEATURES) {
-      if (initialSelected[f.key] === true && granted[f.key] !== true) out[f.key] = true;
+      if (initialSelected[f.key] === true && !featureActive(granted[f.key])) out[f.key] = true;
     }
     return out;
   });
 
   const pickedCount = FEATURES.filter(
-    f => selected[f.key] === true && granted[f.key] !== true,
+    f => selected[f.key] === true && !featureActive(granted[f.key]),
   ).length;
   const total = mode === 'new'
     ? APP_PRICE_PHP + pickedCount * ADDON_PRICE_PHP

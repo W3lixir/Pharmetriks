@@ -8,17 +8,17 @@
  *
  * Bump SW_VERSION to roll out a new shell to existing installs.
  */
-const SW_VERSION    = 'pharmetriks-v1.0.0';
+const SW_VERSION    = 'pharmetriks-v1.0.13';
 const SHELL_CACHE   = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const FONTS_CACHE   = `${SW_VERSION}-fonts`;
 
 // The app currently lives at /app. We also precache the bare HTML file path
-// (rxaudit-local.html) for environments that serve it directly during dev.
+// (pharmetriks-local.html) for environments that serve it directly during dev.
 const APP_SHELL = [
   '/app',
   '/app/',
-  '/rxaudit-local.html',
+  '/pharmetriks-local.html',
   '/manifest.json',
   '/icons/icon.svg',
   '/icons/icon-maskable.svg',
@@ -68,7 +68,11 @@ self.addEventListener('fetch', (event) => {
   // 1) Never intercept the license / auth API — always network.
   if (url.pathname.startsWith('/api/')) return;
 
-  // 2) Navigation requests: network-first, fall back to cached /app shell.
+  // 2) Never intercept auth/portal routes — let the server handle redirects.
+  const AUTH_PATHS = ['/login', '/signup', '/logout', '/pending', '/upload-receipt', '/admin'];
+  if (AUTH_PATHS.some(p => url.pathname === p || url.pathname.startsWith(p + '/'))) return;
+
+  // 3) Navigation requests: network-first, fall back to cached /app shell.
   if (req.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(req));
     return;
@@ -92,18 +96,32 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Race a fetch against a timeout so a dead-but-"online" connection (weak signal,
+// captive portal) can't hang the request. Rejects on timeout so the caller
+// falls back to cache fast.
+function fetchWithTimeout(req, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(req, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+}
+
 async function networkFirstNavigation(req) {
+  // Resolve the cached shell up front so timeout fallback is instant.
+  const cached =
+    (await caches.match(req)) ||
+    (await caches.match('/app')) ||
+    (await caches.match('/pharmetriks-local.html'));
   try {
-    const fresh = await fetch(req);
-    // Cache a copy of the /app HTML for offline use.
-    const cache = await caches.open(SHELL_CACHE);
-    cache.put(req, fresh.clone()).catch(() => {});
+    // If we already have a cached shell, only wait briefly for the network
+    // before serving it. With no cache (first ever load) give it longer.
+    const fresh = await fetchWithTimeout(req, cached ? 3000 : 8000);
+    // Only cache successful, non-redirect responses.
+    if (fresh.status === 200 && fresh.type !== 'opaque') {
+      const cache = await caches.open(SHELL_CACHE);
+      cache.put(req, fresh.clone()).catch(() => {});
+    }
     return fresh;
   } catch {
-    const cached =
-      (await caches.match(req)) ||
-      (await caches.match('/app')) ||
-      (await caches.match('/rxaudit-local.html'));
     if (cached) return cached;
     return new Response(offlineFallbackHTML(), {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },

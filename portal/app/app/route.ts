@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   }
 
   // The HTML file is copied to public/ at build time so Vercel can serve it.
-  const htmlPath = path.join(process.cwd(), 'public', 'rxaudit-local.html');
+  const htmlPath = path.join(process.cwd(), 'public', 'pharmetriks-local.html');
   const html = await readFile(htmlPath, 'utf8');
   return new Response(html, {
     status: 200,

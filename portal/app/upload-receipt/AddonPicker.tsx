@@ -4,7 +4,7 @@
 // total. In upgrade mode, already-owned add-ons render checked + disabled.
 
 import Toggle from '@/components/ui/Toggle';
-import { FEATURES, type FeatureMap } from '@/lib/features';
+import { FEATURES, featureActive, type FeatureMap } from '@/lib/features';
 import { APP_PRICE_PHP, ADDON_PRICE_PHP, peso } from '@/lib/pricing';
 
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
 
 export default function AddonPicker({ selected, onChange, granted, mode }: Props) {
   const ownedKeys = new Set(
-    FEATURES.filter(f => granted?.[f.key] === true).map(f => f.key),
+    FEATURES.filter(f => featureActive(granted?.[f.key])).map(f => f.key),
   );
   const pickedCount = FEATURES.filter(
     f => selected[f.key] === true && !ownedKeys.has(f.key),

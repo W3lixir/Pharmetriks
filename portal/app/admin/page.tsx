@@ -52,9 +52,18 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
 
   if (filter !== 'all') qb = qb.eq('status', filter);
   if (query) {
-    qb = qb.or(
-      `email.ilike.%${query}%,full_name.ilike.%${query}%,pharmacy_name.ilike.%${query}%`,
-    );
+    // Sanitize before interpolating into the PostgREST `.or()` filter string:
+    // strip filter meta-chars (,()*:") that would inject extra conditions, and
+    // escape LIKE wildcards (% _) so they match literally.
+    const safe = query
+      .replace(/[,()*:"\\]/g, ' ')
+      .replace(/[%_]/g, m => `\\${m}`)
+      .trim();
+    if (safe) {
+      qb = qb.or(
+        `email.ilike.%${safe}%,full_name.ilike.%${safe}%,pharmacy_name.ilike.%${safe}%`,
+      );
+    }
   }
 
   const { data: rows, error } = await qb;

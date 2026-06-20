@@ -58,6 +58,7 @@ uploads/
 _assets/
 **/_assets/
 scratch/
+.tmp-test*/
 notes-personal.md
 TODO-personal.md
 .vercel

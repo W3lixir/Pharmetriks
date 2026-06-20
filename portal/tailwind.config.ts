@@ -29,11 +29,13 @@ const config: Config = {
         'glass-lg': '0 24px 60px rgba(0,0,61,0.22)',
       },
       backgroundImage: {
+        // Pharmacy Mint & Sky — clean, clinical, trustworthy. Sky + mint glows
+        // over a cool near-white base, with a faint trust-blue wash at the foot.
         'lyna-page':
-          'radial-gradient(1100px 700px at -10% -10%, #FFCCF2 0%, transparent 55%), ' +
-          'radial-gradient(900px 600px at 110% 10%, #977DFF 0%, transparent 60%), ' +
-          'radial-gradient(1200px 800px at 50% 120%, #0033FF 0%, transparent 60%), ' +
-          'linear-gradient(180deg, #F2E6EE 0%, #efe7ff 60%, #e3ddff 100%)',
+          'radial-gradient(1100px 700px at -10% -10%, #D7ECFF 0%, transparent 55%), ' +
+          'radial-gradient(900px 600px at 110% 10%, #CFF5E7 0%, transparent 60%), ' +
+          'radial-gradient(1200px 800px at 50% 120%, #0033FF 0%, transparent 62%), ' +
+          'linear-gradient(180deg, #F4FBFF 0%, #EAF4FF 58%, #E3F0FF 100%)',
         'lyna-cta':
           'linear-gradient(135deg, #0033FF 0%, #977DFF 100%)',
       },

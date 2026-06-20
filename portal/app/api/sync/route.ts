@@ -19,6 +19,11 @@ import { hasFeature, type FeatureMap } from '@/lib/features';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Must stay in sync with the user_data.collection CHECK constraint (migrations
+// 0003 + 0005/0006/0007). The shipped local client only drives inv/sales/exp;
+// the add-on collections (suki…vale) are accepted server-side and ready in the
+// DB for when their client sync is wired up. Adding valid-but-unused values
+// here is harmless — do NOT trim below the DB constraint or those pushes 400.
 const COLLECTIONS = ['inv', 'sales', 'exp', 'suki', 'utang', 'suppliers', 'po', 'staff', 'vale'] as const;
 type Collection = (typeof COLLECTIONS)[number];
 
