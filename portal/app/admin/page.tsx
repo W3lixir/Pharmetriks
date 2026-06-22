@@ -4,6 +4,7 @@ import Icon from '@/components/ui/Icon';
 import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
 import UserRow from './UserRow';
+import CreateAccountCard from './CreateAccountCard';
 import type { ProfileStatus } from '@/lib/auth';
 
 export const metadata = { title: 'Admin · Pharmetriks' };
@@ -90,6 +91,8 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
           Manage signups, review GCash receipts, approve or reject access.
         </p>
       </div>
+
+      <CreateAccountCard />
 
       {/* Filters */}
       <GlassCard className="p-3 sm:p-4">

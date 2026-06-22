@@ -1740,6 +1740,7 @@
       <button class="btn btn-danger btn-sm" onclick="openEntryModal(document.getElementById('detailSukiId').value,'charge')">+ Utang</button>
       <button class="btn btn-primary btn-sm" onclick="openEntryModal(document.getElementById('detailSukiId').value,'payment')">+ Bayad</button>
       <button class="btn btn-ghost btn-sm" onclick="openSukiModal(document.getElementById('detailSukiId').value)">Edit profile</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadSukiCard(document.getElementById('detailSukiId').value)" title="I-download ang membership card">🪪 Suki Card</button>
       <button class="btn btn-ghost btn-sm" style="color:#dc2626;" onclick="deleteSuki(document.getElementById('detailSukiId').value)">Delete suki</button>
     </div>
 
@@ -1748,6 +1749,17 @@
 
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeUtangModal('sukiDetailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SMART ALERTS: SEE-MORE DETAILS ══════════════════════ -->
+<div class="modal-overlay" id="alertDetailModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <h2 id="alertDetailTitle" style="margin:0 0 10px;">Alerts</h2>
+    <div id="alertDetailBody" style="max-height:62vh;overflow:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('alertDetailModal').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
@@ -1783,8 +1795,9 @@
     <div class="suki-detail-head">
       <h2 style="margin:0;">Price List</h2>
       <div class="rep-controls">
-        <button class="btn btn-secondary btn-sm" onclick="copyPriceList()">Copy text</button>
-        <button class="btn btn-secondary btn-sm" onclick="printPriceList()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Print</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyPriceList()">Copy text</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadCatalogImage()" title="I-download bilang image (pang-share sa FB/Messenger)">⬇ Image</button>
+        <button class="btn btn-primary btn-sm" onclick="downloadCatalogPDF()"><svg class="ic ic-sm"><use href="#i-download"/></svg> PDF</button>
       </div>
     </div>
     <input type="text" id="priceListSearch" placeholder="Hanapin ang produkto…" oninput="renderPriceList()" style="width:100%;margin-bottom:10px;">
@@ -1861,7 +1874,14 @@
       <div class="form-group"><label>Supplier</label><select id="poSupplier" style="width:100%;"></select></div>
       <div class="form-group"><label>Petsa</label><input type="date" id="poDate" style="width:100%;"></div>
     </div>
-    <div class="utang-ledger-label">Mga item</div>
+    <div class="utang-ledger-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span>Mga item</span>
+      <span style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="poAddFromReorder()" title="Idagdag lahat ng low-stock">↻ Reorder list</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('poCsvInput').click()" title="Mag-import ng CSV (Product, Qty, Cost)">⭳ Import CSV</button>
+        <input type="file" id="poCsvInput" accept=".csv,text/csv" style="display:none;" onchange="poImportCsv(event)">
+      </span>
+    </div>
     <div class="po-additem">
       <select id="poItemProduct"></select>
       <input type="number" id="poItemQty" placeholder="Qty" min="1">
@@ -1890,7 +1910,7 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" style="color:#dc2626;" onclick="deletePo(document.getElementById('poDetailId').value)">Delete</button>
       <button class="btn btn-ghost" onclick="closeUtangModal('poDetailModal')">Close</button>
-      <button class="btn btn-primary" id="poReceiveBtn" onclick="receivePo(document.getElementById('poDetailId').value)">Mark Received (add to stock)</button>
+      <button class="btn btn-primary" id="poReceiveBtn" onclick="confirmReceivePo(document.getElementById('poDetailId').value)">Confirm Receive (update stock)</button>
     </div>
   </div>
 </div>
@@ -2228,9 +2248,11 @@ function renderSmartAlerts() {
   const chip = (label, n, color) =>
     `<span class="sa-chip" style="${n > 0 ? `border-color:${color};color:${color};` : 'opacity:.4;'}">${label}: <b>${n}</b></span>`;
 
-  const block = (title, color, items, fmt) => items.length
+  const MAX = 6; // show this many inline; the rest opens in a "see more" modal
+  const moreBtn = (key, n) => `<li class="sa-more"><button type="button" onclick="openAlertDetails('${key}')" style="background:none;border:none;color:#0033FF;font-weight:700;font-size:12px;cursor:pointer;padding:5px 0;">+${n} pa — tingnan lahat ›</button></li>`;
+  const block = (key, title, color, items, fmt) => items.length
     ? `<details class="sa-block"><summary><span class="sa-dot" style="background:${color}"></span>${title} <span class="sa-count">${items.length}</span></summary>
-         <ul class="sa-list">${items.map(fmt).join('')}</ul></details>`
+         <ul class="sa-list">${items.slice(0, MAX).map(fmt).join('')}${items.length > MAX ? moreBtn(key, items.length - MAX) : ''}</ul></details>`
     : '';
 
   const expFmt   = p => `<li>${nameOf(p)} <span class="sa-meta">exp ${esc(p.expiry_date || '—')}</span></li>`;
@@ -2250,6 +2272,16 @@ function renderSmartAlerts() {
     ? toReorder.map(p => `• ${(p.brand_name || p.generic_name || 'Item')}${p.dosage ? ' ' + p.dosage : ''} — ${totalQty(p)} left (order to reach ${reorderThreshold(p)})`).join('\n')
     : '';
 
+  // Full (uncapped) lists for the "see more" modal.
+  window._smartAlertFull = {
+    expired: { title: 'Expired na', body: '<ul class="sa-list">' + expired.map(expFmt).join('') + '</ul>' },
+    near:    { title: 'Malapit nang mag-expire (90 araw)', body: '<ul class="sa-list">' + near.map(expFmt).join('') + '</ul>' },
+    out:     { title: 'Out of stock', body: '<ul class="sa-list">' + out.map(stockFmt).join('') + '</ul>' },
+    low:     { title: 'Below reorder level', body: '<ul class="sa-list">' + low.map(stockFmt).join('') + '</ul>' },
+    reorder: { title: 'Reorder List (' + toReorder.length + ')', body: '<pre class="sa-reorder-text" style="white-space:pre-wrap;">' + esc(window._reorderText) + '</pre>' },
+  };
+  const reorderLines = window._reorderText ? window._reorderText.split('\n') : [];
+
   host.innerHTML =
     `<div class="sa-card">
        <div class="sa-head">
@@ -2262,19 +2294,31 @@ function renderSmartAlerts() {
          ${chip('Out of stock', out.length, '#dc2626')}
          ${chip('Below reorder', low.length, '#d97706')}
        </div>
-       ${block('Expired na', '#dc2626', expired, expFmt)}
-       ${block('Malapit nang mag-expire (90 araw)', '#d97706', near, expFmt)}
-       ${block('Out of stock', '#dc2626', out, stockFmt)}
-       ${block('Below reorder level', '#d97706', low, stockFmt)}
+       ${block('expired', 'Expired na', '#dc2626', expired, expFmt)}
+       ${block('near', 'Malapit nang mag-expire (90 araw)', '#d97706', near, expFmt)}
+       ${block('out', 'Out of stock', '#dc2626', out, stockFmt)}
+       ${block('low', 'Below reorder level', '#d97706', low, stockFmt)}
        ${toReorder.length ? `<div class="sa-reorder">
             <div class="sa-reorder-head">
               <strong>Reorder List (${toReorder.length})</strong>
               <button class="btn btn-secondary btn-sm" onclick="copyReorderList()">Copy list</button>
             </div>
-            <pre class="sa-reorder-text">${esc(window._reorderText)}</pre>
+            <pre class="sa-reorder-text">${esc(reorderLines.slice(0, MAX).join('\n'))}</pre>
+            ${reorderLines.length > MAX ? `<button type="button" onclick="openAlertDetails('reorder')" style="background:none;border:none;color:#0033FF;font-weight:700;font-size:12px;cursor:pointer;padding:4px 0;">+${reorderLines.length - MAX} pa — tingnan lahat ›</button>` : ''}
           </div>` : ''}
      </div>`;
 }
+
+// "See more" → full list of one alert category in a modal.
+function openAlertDetails(key) {
+  const g = (window._smartAlertFull || {})[key];
+  const modal = document.getElementById('alertDetailModal');
+  if (!g || !modal) return;
+  document.getElementById('alertDetailTitle').textContent = g.title;
+  document.getElementById('alertDetailBody').innerHTML = g.body;
+  modal.classList.add('open');
+}
+window.openAlertDetails = openAlertDetails;
 
 function copyReorderList() {
   const text = window._reorderText || '';
@@ -2844,12 +2888,20 @@ function printMonthlyPL() {
 // Lazy-loads html2canvas + jsPDF on demand; falls back to a print window offline.
 
 function reportShopName() {
+  // 1) Pharmacy name from the account (entered at signup, returned by
+  //    /api/verify-license and cached in the license) — preferred, no prompt.
+  if (window.PHARMETRIKS_SHOP) return window.PHARMETRIKS_SHOP;
+  try {
+    const lic = JSON.parse(localStorage.getItem('pharmetriks_license_v1') || 'null');
+    if (lic && lic.pharmacy_name) return lic.pharmacy_name;
+  } catch (e) {}
+  // 2) Manual override / standalone mode (file://, no account).
   let n = '';
   try { n = localStorage.getItem('pharmetriks_shop_name') || ''; } catch (e) {}
-  if (!n) {
-    n = (window.prompt('Pangalan ng botika (para sa report header):') || '').trim();
-    if (n) { try { localStorage.setItem('pharmetriks_shop_name', n); } catch (e) {} }
-  }
+  if (n) return n;
+  // 3) Last resort — ask once and remember.
+  n = (window.prompt('Pangalan ng botika (para sa report header):') || '').trim();
+  if (n) { try { localStorage.setItem('pharmetriks_shop_name', n); } catch (e) {} }
   return n || 'Aking Botika';
 }
 
@@ -2946,7 +2998,7 @@ async function _renderReportPdf(m, filename) {
   try {
     await _loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
     await _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-    const canvas = await window.html2canvas(holder.firstElementChild, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    const canvas = await window.html2canvas((holder.querySelector('div') || holder.firstElementChild), { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
     const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
     const pw = pdf.internal.pageSize.getWidth();
     const ph = pdf.internal.pageSize.getHeight();
@@ -3202,6 +3254,196 @@ function printPriceList() {
   }).join('');
   openPrintWindow('Pharmetriks — Price List', `<h1>Price List</h1><div class="sub">${esc(today())}</div>${rows || '<div>Walang produkto.</div>'}`);
 }
+
+// ── Branded catalog → PDF / PNG (uses the same lazy html2canvas + jsPDF) ──
+function catalogHtml(items, shop, pageInfo) {
+  const groups = {};
+  items.forEach(p => { const c = (p.category || '').trim() || 'Iba pa'; (groups[c] = groups[c] || []).push(p); });
+  const cats = Object.keys(groups).sort();
+  const nameOf = p => [p.generic_name, p.brand_name, (p.dosage && p.dosage !== 'N/A' ? p.dosage : '')].filter(Boolean).join(' ');
+  const sections = cats.map(c => {
+    const rows = groups[c].map(p =>
+      `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dotted #e5e7eb;font-size:12px;">
+         <span style="color:#1e0a47;">${esc(nameOf(p))}</span>
+         <b style="color:#0033FF;white-space:nowrap;">${peso(p.price)}</b>
+       </div>`).join('');
+    return `<div style="margin-bottom:4px;">
+      <div style="background:#eef2ff;color:#0033FF;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;padding:5px 8px;border-radius:6px;margin:9px 0 5px;">${esc(c)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px;">${rows}</div>
+    </div>`;
+  }).join('');
+  return `<style>.cat *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif}</style>
+  <div class="cat" style="width:760px;background:#fff;color:#1e0a47;padding:24px 30px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #e7e9f5;padding-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#0033FF,#977DFF);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;">Rx</div>
+        <div><div style="font-weight:800;font-size:15px;">${esc(shop)}</div><div style="font-size:10px;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;">Pharmetriks · Price List</div></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#64748b;"><div style="font-size:18px;font-weight:800;color:#00128a;letter-spacing:1px;">PRICE LIST</div><div>${esc(new Date(today() + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }))}</div></div>
+    </div>
+    ${sections || '<div style="text-align:center;color:#94a3b8;padding:30px;">Walang produkto.</div>'}
+    <div style="margin-top:14px;padding-top:8px;border-top:1px solid #e7e9f5;font-size:10px;color:#94a3b8;text-align:center;">Mga presyo ay maaaring magbago nang walang abiso · Generated by Pharmetriks${pageInfo ? ' · Page ' + pageInfo.page + ' of ' + pageInfo.total : ''}</div>
+  </div>`;
+}
+
+async function _htmlToCanvas(html) {
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff;z-index:-1;';
+  holder.innerHTML = html;
+  document.body.appendChild(holder);
+  try {
+    await _loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    return await window.html2canvas((holder.querySelector('div') || holder.firstElementChild), { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  } finally {
+    document.body.removeChild(holder);
+  }
+}
+
+async function downloadCatalogPDF() {
+  const items = priceListItems();
+  if (!items.length) { toast('Walang produkto sa catalog.', 'error'); return; }
+  const shop = reportShopName();
+  toast('Ginagawa ang PDF…');
+  try {
+    await _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    // Paginate by DATA (not by slicing one tall image) so no product row is ever
+    // cut in half at a page boundary — each chunk is rendered as its own page.
+    const PER = 60; // ~30 rows × 2 columns; conservative so a chunk fits one A4
+    const total = Math.ceil(items.length / PER);
+    for (let i = 0; i < total; i++) {
+      const chunk = items.slice(i * PER, (i + 1) * PER);
+      const canvas = await _htmlToCanvas(catalogHtml(chunk, shop, { page: i + 1, total }));
+      const imgH = canvas.height * pw / canvas.width;
+      if (i > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pw, imgH);
+    }
+    pdf.save('Pharmetriks-Price-List-' + today() + '.pdf');
+    toast('Na-download ang catalog (' + total + ' page' + (total > 1 ? 's' : '') + ') ✓');
+  } catch (e) {
+    console.error('[catalog pdf]', e);
+    toast('Hindi magawa ang PDF: ' + ((e && e.message) || 'subukan ulit') + ' — Console (F12).', 'error');
+  }
+}
+window.downloadCatalogPDF = downloadCatalogPDF;
+
+async function downloadCatalogImage() {
+  const items = priceListItems();
+  if (!items.length) { toast('Walang produkto sa catalog.', 'error'); return; }
+  toast('Ginagawa ang image…');
+  try {
+    const canvas = await _htmlToCanvas(catalogHtml(items, reportShopName()));
+    canvas.toBlob(function (blob) {
+      if (!blob) { toast('Hindi magawa ang image.', 'error'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'Pharmetriks-Price-List-' + today() + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      toast('Na-download ang image ✓ — pwede mo nang i-share sa FB/Messenger.');
+    }, 'image/png');
+  } catch (e) {
+    console.error('[catalog image]', e);
+    toast('Hindi magawa ang image: ' + ((e && e.message) || 'subukan ulit') + ' — para sa mahabang listahan, gamitin ang PDF.', 'error');
+  }
+}
+window.downloadCatalogImage = downloadCatalogImage;
+
+// ── Suki membership card → downloadable image (logo + botika name + member no.) ──
+function sukiMemberNo(id) {
+  const s = String(id || '').replace(/[^a-z0-9]/gi, '').toUpperCase();
+  return 'SC-' + (s.slice(-6) || '000000');
+}
+function sukiCardHtml(s, shop, qr) {
+  return `<style>.scard *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif}</style>
+  <div class="scard" style="width:540px;height:340px;border-radius:22px;overflow:hidden;position:relative;
+       background:linear-gradient(135deg,#0033FF 0%,#5b4bff 55%,#977DFF 100%);color:#fff;padding:24px 26px;">
+    <div style="position:absolute;left:-70px;bottom:-90px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.07);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;">
+      <div style="display:flex;align-items:center;gap:11px;">
+        <div style="width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;">Rx</div>
+        <div><div style="font-weight:800;font-size:17px;letter-spacing:-.2px;">${esc(shop)}</div>
+          <div style="font-size:9.5px;letter-spacing:2px;text-transform:uppercase;opacity:.82;">Pharmetriks · Suki Member</div></div>
+      </div>
+      ${qr ? `<div style="background:#fff;border-radius:11px;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);"><img src="${qr}" style="width:84px;height:84px;display:block;" /></div>`
+            : `<div style="width:96px;height:96px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:10px;opacity:.7;">QR</div>`}
+    </div>
+    <div style="position:absolute;left:26px;bottom:54px;">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;opacity:.72;">Pangalan</div>
+      <div style="font-size:25px;font-weight:800;letter-spacing:-.4px;margin-top:1px;">${esc(s.name || 'Suki')}</div>
+    </div>
+    <div style="position:absolute;left:26px;right:26px;bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;">
+      <div><div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:.7;">Member No.</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:15px;font-weight:700;letter-spacing:1px;">${esc(sukiMemberNo(s.id))}</div></div>
+      ${s.phone ? `<div style="text-align:right;"><div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;opacity:.7;">Contact</div><div style="font-size:13px;font-weight:600;">${esc(s.phone)}</div></div>` : ''}
+    </div>
+  </div>`;
+}
+// Card BACK: suki perks + member-since + contact / if-found. (QR is on the front.)
+function sukiCardBackHtml(s, shop) {
+  const since = s.created_at ? new Date(s.created_at).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' }) : '';
+  return `<style>.scardb *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,Arial,sans-serif}</style>
+  <div class="scardb" style="width:540px;height:340px;border-radius:22px;overflow:hidden;position:relative;background:#fff;color:#1e0a47;border:1px solid #e7e9f5;">
+    <div style="height:42px;background:linear-gradient(135deg,#0033FF,#977DFF);display:flex;align-items:center;gap:8px;padding:0 20px;color:#fff;">
+      <div style="width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">Rx</div>
+      <div style="font-weight:800;font-size:13px;">${esc(shop)}</div>
+      <div style="margin-left:auto;font-size:9px;letter-spacing:2px;text-transform:uppercase;opacity:.85;">Suki Card</div>
+    </div>
+    <div style="padding:16px 24px 8px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0033FF;">Mga Perks ng Suki</div>
+        <div style="font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;font-weight:700;color:#0033FF;letter-spacing:.5px;">${esc(sukiMemberNo(s.id))}</div>
+      </div>
+      <div style="font-size:13px;line-height:2;margin-top:6px;color:#334155;">✓ Utang privilege<br>✓ Priority service<br>✓ Special suki discounts<br>✓ Una kang aabisuhan sa bagong stock</div>
+      ${since ? `<div style="font-size:10.5px;color:#94a3b8;margin-top:9px;">Suki since ${esc(since)}</div>` : ''}
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;padding:9px 24px;background:#f8fafc;border-top:1px solid #eef2f7;font-size:10px;color:#64748b;">
+      <b style="color:#1e0a47;">Kung mahanap, pakibalik sa ${esc(shop)}.</b>${s.phone ? ' · ' + esc(s.phone) : ''}
+    </div>
+  </div>`;
+}
+
+async function _makeQR(text) {
+  try {
+    await _loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js');
+    if (typeof window.qrcode === 'function') {
+      const qr = window.qrcode(0, 'M');   // auto version, medium error-correction
+      qr.addData(text);
+      qr.make();
+      return qr.createDataURL(6, 2);       // cellSize, margin → PNG/GIF data URL
+    }
+  } catch (e) { console.warn('[qr] skipped:', e); }
+  return ''; // graceful: card just renders without a QR when the lib is blocked
+}
+
+// 2-sided suki card → 2-page PDF (page 1 = front, page 2 = back), each at CR80
+// card size, same position, so it prints correctly double-sided.
+async function downloadSukiCard(id) {
+  const s = (sukiData || []).find(x => x.id === id);
+  if (!s) { toast('Walang suki.', 'error'); return; }
+  toast('Ginagawa ang card…');
+  try {
+    const shop = reportShopName();
+    const qr = await _makeQR('SUKI:' + s.id);
+    const front = await _htmlToCanvas(sukiCardHtml(s, shop, qr));
+    const back = await _htmlToCanvas(sukiCardBackHtml(s, shop));
+    await _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+    const pw = pdf.internal.pageSize.getWidth();
+    const cw = 85.6, ch = cw * (front.height / front.width), x = (pw - cw) / 2, y = 22; // CR80, centered
+    pdf.addImage(front.toDataURL('image/png'), 'PNG', x, y, cw, ch);
+    pdf.addPage();
+    pdf.addImage(back.toDataURL('image/png'), 'PNG', x, y, cw, ch);
+    pdf.save('Suki-Card-' + (s.name || 'suki').replace(/[^a-z0-9]+/gi, '-') + '.pdf');
+    toast('Na-download ang 2-sided suki card ✓');
+  } catch (e) {
+    console.error('[suki card] failed:', e);
+    const msg = (e && e.message) ? e.message : 'subukan ulit';
+    toast('Hindi magawa ang card: ' + msg + ' — buksan ang Console (F12) para sa detalye.', 'error');
+  }
+}
+window.downloadSukiCard = downloadSukiCard;
 
 // ══════════════════ MARGIN & PRICING ADVISOR (add-on: 'pricing_advisor') ══════════════════
 function pricingEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('pricing_advisor')); }
@@ -3501,6 +3743,57 @@ function addPoItem() {
 
 function removePoItem(idx) { poDraft.splice(idx, 1); renderPoDraft(); }
 
+// Quick-fill the PO draft from the low-stock list (suggested qty to ~2x reorder).
+function poAddFromReorder() {
+  const low = (invData || []).filter(p => (Number(p.qty) || 0) <= reorderThreshold(p));
+  if (!low.length) { toast('Walang low-stock na produkto.', 'info'); return; }
+  let added = 0;
+  low.forEach(p => {
+    if (poDraft.some(d => d.product_id === p.id)) return; // already in draft
+    const sug = Math.max(reorderThreshold(p) * 2 - (Number(p.qty) || 0), 1);
+    poDraft.push({ product_id: p.id, name: prodLabel(p), qty: sug, cost: Number(p.cost) || 0 });
+    added++;
+  });
+  renderPoDraft();
+  toast(added ? `Idinagdag ang ${added} low-stock item.` : 'Nasa draft na lahat ng low-stock.');
+}
+
+// Import a CSV (Product, Qty, Cost). Rows are matched to existing inventory by
+// name (PO items need a product to receive into); unmatched rows are reported.
+function poImportCsv(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const rows = parseCSVText(ev.target.result || '');
+    if (rows.length < 2) { toast('Walang laman ang CSV.', 'error'); e.target.value = ''; return; }
+    const H = rows[0];
+    const ni = findColIdx(H, ['product', 'name', 'produkto', 'generic', 'brand', 'item', 'pangalan', 'gamot']);
+    const qi = findColIdx(H, ['qty', 'quantity', 'bilang', 'order', 'dami']);
+    const ci = findColIdx(H, ['cost', 'presyo', 'price', 'halaga', 'puhunan']);
+    if (ni < 0 || qi < 0) { toast('Kailangan ng Product + Qty column sa CSV.', 'error'); e.target.value = ''; return; }
+    let added = 0, skipped = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[ni] || '').trim();
+      const qty = parseInt(csvNum(r[qi]), 10);
+      if (!name || !(qty > 0)) continue;
+      const ln = name.toLowerCase();
+      const prod = (invData || []).find(p => [p.generic_name, p.brand_name, prodLabel(p)].some(f => (f || '').toLowerCase() === ln))
+        || (invData || []).find(p => [p.generic_name, p.brand_name].some(f => { const x = (f || '').toLowerCase(); return x && (x.includes(ln) || ln.includes(x)); }));
+      if (!prod) { skipped++; continue; }
+      if (poDraft.some(d => d.product_id === prod.id)) continue;
+      const cost = ci >= 0 ? (parseFloat(csvNum(r[ci])) || Number(prod.cost) || 0) : (Number(prod.cost) || 0);
+      poDraft.push({ product_id: prod.id, name: prodLabel(prod), qty, cost });
+      added++;
+    }
+    renderPoDraft();
+    toast(`Na-import: ${added} item${skipped ? ` · ${skipped} walang katugma sa inventory` : ''}.`);
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
 function renderPoDraft() {
   const host = document.getElementById('poDraftItems');
   if (!host) return;
@@ -3533,13 +3826,74 @@ function openPoDetail(id) {
   document.getElementById('poDetailId').value = id;
   document.getElementById('poDetailTitle').textContent = supplierLabel(po.supplier_id);
   document.getElementById('poDetailMeta').textContent = `${po.date || ''}${po.note ? ' · ' + po.note : ''}`;
-  document.getElementById('poDetailStatus').innerHTML = `<span class="po-status ${po.status === 'received' ? 'received' : 'ordered'}">${po.status === 'received' ? 'Received' : 'Ordered'}</span>`;
-  document.getElementById('poDetailItems').innerHTML = (po.items || []).map(it =>
-    `<div class="po-item"><span class="po-item-name">${esc(it.name)}</span><span class="po-item-qty">${it.qty} × ${peso(it.cost)}</span></div>`).join('');
-  document.getElementById('poDetailTotal').textContent = 'Total: ' + peso(poTotal(po));
-  document.getElementById('poReceiveBtn').style.display = po.status === 'received' ? 'none' : '';
+  const received = po.status === 'received';
+  document.getElementById('poDetailStatus').innerHTML = `<span class="po-status ${received ? 'received' : 'ordered'}">${received ? 'Received' : 'Ordered'}</span>`;
+  const itemsEl = document.getElementById('poDetailItems');
+  if (received) {
+    itemsEl.innerHTML = (po.items || []).map(it =>
+      `<div class="po-item"><span class="po-item-name">${esc(it.name)}</span><span class="po-item-qty">${it.received_qty != null ? it.received_qty : it.qty} dumating × ${peso(it.cost)}</span></div>`).join('')
+      + (po.amount_paid != null ? `<div class="po-total" style="color:#0a8a3f;">Binayad sa supplier: ${peso(po.amount_paid)}</div>` : '');
+    document.getElementById('poDetailTotal').textContent = 'Order total: ' + peso(poTotal(po));
+    document.getElementById('poReceiveBtn').style.display = 'none';
+  } else {
+    // Receive form: editable "dumating" qty per item + total binayad sa supplier.
+    itemsEl.innerHTML = (po.items || []).map((it, i) =>
+      `<div class="po-item" style="align-items:center;gap:8px;">
+         <span class="po-item-name">${esc(it.name)}</span>
+         <span class="po-item-qty" style="white-space:nowrap;">order ${it.qty} × ${peso(it.cost)}</span>
+         <input type="number" id="porecv-${i}" class="po-recv" min="0" value="${it.qty}" title="Ilan ang dumating?"
+                style="width:60px;padding:5px 6px;border:1px solid rgba(151,125,255,.35);border-radius:7px;text-align:center;">
+       </div>`).join('')
+      + `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.06);">
+           <label for="poAmountPaid" style="font-size:12.5px;font-weight:600;color:#1e0a47;">Kabuuang binayad sa supplier</label>
+           <input type="number" id="poAmountPaid" min="0" step="0.01" value="${poTotal(po).toFixed(2)}"
+                  style="width:120px;padding:6px 8px;border:1px solid rgba(151,125,255,.35);border-radius:7px;text-align:right;font-weight:700;">
+         </div>
+         <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Hiwalay sa Expenses — purchases lang ito, hindi OPEX.</div>`;
+    document.getElementById('poDetailTotal').textContent = 'Order total: ' + peso(poTotal(po));
+    const btn = document.getElementById('poReceiveBtn');
+    btn.style.display = '';
+    btn.textContent = 'Confirm Receive (update stock)';
+  }
   document.getElementById('poDetailModal').classList.add('open');
 }
+
+// New receive flow: adds the ACTUAL received qty per item to inventory and records
+// the amount paid on the PO. Purchases are kept SEPARATE from Expenses/OPEX.
+function confirmReceivePo(id) {
+  const po = poData.find(x => x.id === id);
+  if (!po || po.status === 'received') return;
+  const items = po.items || [];
+  let totalRecv = 0;
+  items.forEach((it, i) => {
+    const el = document.getElementById('porecv-' + i);
+    const rq = el ? Math.max(0, parseInt(el.value, 10) || 0) : (Number(it.qty) || 0);
+    it.received_qty = rq;
+    totalRecv += rq;
+    if (rq > 0) {
+      const prod = (invData || []).find(p => p.id === it.product_id);
+      if (prod) {
+        prod.qty = (Number(prod.qty) || 0) + rq;
+        if (Number(it.cost) > 0) prod.cost = Number(it.cost); // refresh to latest buying cost
+        prod.updated_at = new Date().toISOString();
+      }
+    }
+  });
+  if (totalRecv <= 0) { toast('Maglagay ng dumating na qty.', 'error'); return; }
+  const paidEl = document.getElementById('poAmountPaid');
+  po.amount_paid = paidEl ? (parseFloat(paidEl.value) || 0) : poTotal(po);
+  po.status = 'received';
+  po.received_at = new Date().toISOString();
+  po.updated_at = po.received_at;
+  dbSave('inv', invData);
+  dbSave('po', poData);
+  renderInventory();
+  renderProductList();
+  renderSuppliers();
+  openPoDetail(id);
+  toast(`Na-receive — +${totalRecv} sa stock · binayad ${peso(po.amount_paid)}.`);
+}
+window.confirmReceivePo = confirmReceivePo;
 
 function receivePo(id) {
   const po = poData.find(x => x.id === id);
@@ -5088,10 +5442,21 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
 // One pass over the whole document, so it also covers any search bar added later.
 (function () {
   // 1) Kill browser autofill (contacts/address dropdowns) on form fields.
-  //    Search bars are excluded by their `*Search` id.
-  document.querySelectorAll('input, textarea').forEach(el => {
+  //    Chrome IGNORES autocomplete="off" for name/tel/address fields, so use a
+  //    token it won't offer contacts for ("new-password" — harmless on text
+  //    inputs, no save-password UI), plus keep text fields readonly until the
+  //    user taps them so autofill can't pop up on focus. Search bars excluded.
+  document.querySelectorAll('input, textarea').forEach(function (el) {
     if (el.id && /Search$/.test(el.id)) return;
-    el.setAttribute('autocomplete', 'off');
+    el.setAttribute('autocomplete', 'new-password');
+    var t = (el.getAttribute('type') || 'text').toLowerCase();
+    if (el.tagName === 'INPUT' && (t === 'text' || t === 'tel' || t === 'email')) {
+      el.setAttribute('readonly', 'readonly');
+      var unlock = function () { el.removeAttribute('readonly'); };
+      el.addEventListener('focus', unlock);
+      el.addEventListener('pointerdown', unlock);
+      el.addEventListener('touchstart', unlock, { passive: true });
+    }
   });
 
   // 2) Styles for the clear button (injected once, self-contained).
@@ -5348,9 +5713,11 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
           status: data.status || 'approved',
           expires_at: data.expires_at || null,
           features: data.features || {},
+          pharmacy_name: data.pharmacy_name || '',
           verified_at: new Date().toISOString()
         });
         window.PHARMETRIKS_FEATURES = data.features || {};
+        window.PHARMETRIKS_SHOP = data.pharmacy_name || window.PHARMETRIKS_SHOP || '';
         if (window.PHARMETRIKS_SYNC && window.PHARMETRIKS_SYNC.onFeaturesReady) window.PHARMETRIKS_SYNC.onFeaturesReady();
         if (window.applyDiscountVisibility) window.applyDiscountVisibility();
         if (window.renderSmartAlerts) window.renderSmartAlerts();
@@ -5399,6 +5766,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   // so gating works offline; refreshed by verifyLicense() when online.
   // Gate a feature's UI with: if (window.PHARMETRIKS_HAS('feature_key')) { … }
   window.PHARMETRIKS_FEATURES = (loadLicense() || {}).features || {};
+  window.PHARMETRIKS_SHOP = (loadLicense() || {}).pharmacy_name || '';
   window.PHARMETRIKS_HAS = function (key) {
     var f = (loadLicense() || {}).features || window.PHARMETRIKS_FEATURES || {};
     return f[key] === true;

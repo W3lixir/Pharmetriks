@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import Icon from '@/components/ui/Icon';
 import GlassCard from '@/components/ui/GlassCard';
 import Toggle from '@/components/ui/Toggle';
@@ -22,6 +23,7 @@ import {
   getReceiptSignedUrl,
 } from './actions';
 import type { ProfileStatus } from '@/lib/auth';
+import SetPasswordControl from './SetPasswordControl';
 
 type Profile = {
   id: string;
@@ -372,6 +374,21 @@ export default function UserRow({ profile }: { profile: Profile }) {
                 {error}
               </div>
             )}
+
+            {/* Admin "encode password" — set a known password for this account */}
+            <div className="mb-3">
+              <SetPasswordControl userId={profile.id} email={profile.email} />
+            </div>
+
+            {/* View the user's synced data + generate their Daily Report */}
+            <div className="mb-3">
+              <Link
+                href={`/admin/report/${profile.id}`}
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-accent/30 bg-accent/5 px-3 py-2 text-[12.5px] font-bold text-accent hover:bg-accent/10"
+              >
+                <Icon name="chart" size={14} /> Tingnan ang data + report
+              </Link>
+            </div>
 
             {/* Status-aware action panel */}
             {profile.status === 'awaiting_payment' || profile.status === 'pending' ? (

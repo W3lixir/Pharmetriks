@@ -19,6 +19,7 @@ export default function LoginForm() {
   const params = useSearchParams();
   const next   = params.get('next')   ?? '';
   const reason = params.get('reason') ?? '';
+  const justReset = params.get('reset') === '1';
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(REASONS[reason] ?? null);
   const [showPw, setShowPw] = useState(false);
@@ -36,6 +37,9 @@ export default function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {error && <FormAlert>{error}</FormAlert>}
+      {!error && justReset && (
+        <FormAlert tone="success">Na-update na ang password mo. Mag-login gamit ang bago.</FormAlert>
+      )}
       <input type="hidden" name="next" value={next} />
 
       <Field
@@ -67,6 +71,12 @@ export default function LoginForm() {
         >
           <Icon name={showPw ? 'x' : 'lock'} size={16} />
         </button>
+      </div>
+
+      <div className="-mt-1.5 text-right">
+        <Link href="/forgot-password" className="text-[12px] font-semibold text-accent hover:underline">
+          Nakalimutan ang password?
+        </Link>
       </div>
 
       <button

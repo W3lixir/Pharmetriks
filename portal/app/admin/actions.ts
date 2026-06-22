@@ -1,5 +1,6 @@
 'use server';
 
+import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, adminService } from '@/lib/admin';
 import { FEATURES, featureActive, nextExpiry, ADDON_TERM_DAYS, type FeatureMap } from '@/lib/features';
@@ -261,4 +262,90 @@ export async function getReceiptSignedUrl(receiptPath: string): Promise<string |
     .createSignedUrl(receiptPath, 60 * 10); // 10-minute link
   if (error) return null;
   return data?.signedUrl ?? null;
+}
+
+// ── Admin-created account (RxAudit-style managed accounts) ──────────────
+// The admin sets the credentials, so they can log in as the pharmacy to import
+// CSVs / manage data. Account is auto-approved; the password is returned ONCE so
+// the admin can copy and share it (it is never stored in plaintext anywhere).
+
+export type CreateAccountResult =
+  | { ok: true; email: string; password: string }
+  | { ok: false; error: string };
+
+function randomPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'; // no ambiguous chars
+  const bytes = randomBytes(12);
+  let p = '';
+  for (let i = 0; i < 12; i++) p += chars[bytes[i] % chars.length];
+  return p;
+}
+
+export async function createAccountAction(formData: FormData): Promise<CreateAccountResult> {
+  const admin = await requireAdmin();
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const pharmacyName = String(formData.get('pharmacy_name') ?? '').trim();
+  const fullName = String(formData.get('full_name') ?? '').trim();
+  let password = String(formData.get('password') ?? '').trim();
+
+  if (!email) return { ok: false, error: 'Email ay kailangan.' };
+  if (!pharmacyName) return { ok: false, error: 'Pharmacy name ay kailangan.' };
+  if (password && password.length < 8) return { ok: false, error: 'Password ay 8 character pataas.' };
+  if (!password) password = randomPassword();
+
+  const svc = adminService();
+  const { data, error } = await svc.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true, // no email verification needed — admin vouches for it
+    user_metadata: { full_name: fullName, pharmacy_name: pharmacyName },
+  });
+  if (error) {
+    const m = error.message.toLowerCase();
+    if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
+      return { ok: false, error: 'May account na yang email address.' };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  const uid = data.user?.id;
+  if (uid) {
+    // The auth trigger created the profile; auto-approve it + stamp the details.
+    await svc.from('profiles').update({
+      status: 'approved',
+      approved_at: new Date().toISOString(),
+      approved_by: admin.userId,
+      full_name: fullName || null,
+      pharmacy_name: pharmacyName,
+    }).eq('id', uid);
+    await logAction({ adminId: admin.userId, targetUserId: uid, action: 'approve', notes: 'admin-created account' });
+  }
+
+  revalidatePath('/admin');
+  return { ok: true, email, password };
+}
+
+// ── Admin sets/resets the password of an existing (signed-up) account ──────
+// The flow: user self-signs-up + uploads receipt → admin reviews → admin
+// "encodes" a known password here so they can log in as the pharmacy (CSV
+// import, support) and share the credentials. Returned ONCE for copying.
+
+export type SetPasswordResult = { ok: true; password: string } | { ok: false; error: string };
+
+export async function setUserPasswordAction(formData: FormData): Promise<SetPasswordResult> {
+  const admin = await requireAdmin();
+  const targetId = String(formData.get('target_user_id') ?? '');
+  let password = String(formData.get('password') ?? '').trim();
+  if (!targetId) return { ok: false, error: 'Missing target user.' };
+  if (password && password.length < 8) return { ok: false, error: 'Password ay 8 character pataas.' };
+  if (!password) password = randomPassword();
+
+  const svc = adminService();
+  // Also confirm the email — fixes self-signup accounts that got stuck
+  // unconfirmed (which login reports as "Invalid login credentials").
+  const { error } = await svc.auth.admin.updateUserById(targetId, { password, email_confirm: true });
+  if (error) return { ok: false, error: error.message };
+
+  await logAction({ adminId: admin.userId, targetUserId: targetId, action: 'note', notes: 'admin set/reset password + confirm' });
+  return { ok: true, password };
 }

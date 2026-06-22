@@ -10,6 +10,7 @@ type VerifyResult = {
   status: 'pending' | 'awaiting_payment' | 'approved' | 'rejected' | 'revoked' | 'no_session';
   expires_at: string | null;
   features: Record<string, boolean>;
+  pharmacy_name: string | null;
 };
 
 export async function POST(): Promise<NextResponse<VerifyResult>> {
@@ -17,17 +18,17 @@ export async function POST(): Promise<NextResponse<VerifyResult>> {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null, features: {} });
+    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null, features: {}, pharmacy_name: null });
   }
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('status, license_expires_at, features')
+    .select('status, license_expires_at, features, pharmacy_name')
     .eq('id', user.id)
     .maybeSingle();
 
   if (!profile) {
-    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null, features: {} });
+    return NextResponse.json({ valid: false, status: 'no_session', expires_at: null, features: {}, pharmacy_name: null });
   }
 
   const expired = profile.license_expires_at
@@ -44,5 +45,6 @@ export async function POST(): Promise<NextResponse<VerifyResult>> {
     // sees plain booleans of what's active at verify time; a lapsed add-on
     // simply disappears on the next app load.
     features: activeFeatureBooleans((profile.features ?? {}) as FeatureMap),
+    pharmacy_name: (profile.pharmacy_name as string | null) ?? null,
   });
 }
