@@ -8,7 +8,7 @@
  *
  * Bump SW_VERSION to roll out a new shell to existing installs.
  */
-const SW_VERSION    = 'pharmetriks-v1.0.13';
+const SW_VERSION    = 'pharmetriks-v1.0.14';
 const SHELL_CACHE   = `${SW_VERSION}-shell`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const FONTS_CACHE   = `${SW_VERSION}-fonts`;
@@ -67,6 +67,11 @@ self.addEventListener('fetch', (event) => {
 
   // 1) Never intercept the license / auth API — always network.
   if (url.pathname.startsWith('/api/')) return;
+
+  // 1b) Never intercept Next.js build assets — chunk URLs aren't content-hashed
+  // in dev, so caching them can serve stale modules after a rebuild/restart
+  // and crash the page ("Cannot read properties of undefined (reading 'call')").
+  if (url.pathname.startsWith('/_next/')) return;
 
   // 2) Never intercept auth/portal routes — let the server handle redirects.
   const AUTH_PATHS = ['/login', '/signup', '/logout', '/pending', '/upload-receipt', '/admin'];

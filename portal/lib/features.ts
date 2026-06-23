@@ -83,6 +83,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'reports_pack',    label: 'Reports & Sulit Pack',         description: 'Daily Sulit (end-of-day summary), Monthly P&L (kita = benta − COGS − OPEX), at one-tap print/share ng buwanang report.' },
   { key: 'vale_sahod',      label: 'Vale & Sahod ng Staff',        description: 'I-log ang bawat vale ng helper at auto-bawas sa sahod — malinaw ang computation, walang awayan, walang nakakalimutan.' },
   { key: 'bodega_stock',    label: 'Bodega Stock',                 description: 'Hiwalay ang bilang ng nasa estante at nasa bodega. Kapag ubos sa display, sasabihin ng app kung may makukuha pa sa likod.' },
+  { key: 'dispense_guide',  label: 'Gabay sa Dispensing',          description: 'Hanapin ang sakit o sintomas ng pasyente at lalabas ang gabay: karaniwang OTC, paano iinumin, bawal isabay, bawal na kondisyon, at kailan dapat sa doktor. Sasabihin din kung may stock ka. Pinamamahalaan at awtomatikong nag-a-update mula sa Pharmetriks.' },
 ];
 
 /** Keys in `map` that are active right now (lifetime or unexpired). */

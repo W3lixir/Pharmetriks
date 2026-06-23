@@ -9,8 +9,8 @@ export default function SignupPage() {
     <>
       <AuthShell
         pill={{ tone: 'pink', label: '₱249 one-time, lifetime access' }}
-        title={<>Gumawa ng account</>}
-        subtitle="30 seconds lang. Pagkatapos, magbabayad ka via GCash."
+        title={<>Mag-apply ng account</>}
+        subtitle="Magbayad ng ₱249 via GCash, i-upload ang resibo, at ire-review namin bago gawin ang account mo."
       >
         <SignupForm />
       </AuthShell>

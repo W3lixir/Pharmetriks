@@ -981,6 +981,10 @@
     <div class="nav-item" data-tab="suppliers" id="navSuppliers" onclick="switchTab('suppliers')" style="display:none;">
       <svg class="ic"><use href="#i-compass"/></svg> Suppliers
     </div>
+    <!-- Gabay tab (add-on: 'dispense_guide'). Hidden unless entitled. -->
+    <div class="nav-item" data-tab="guides" id="navGuides" onclick="switchTab('guides')" style="display:none;">
+      <svg class="ic"><use href="#i-help"/></svg> Gabay
+    </div>
   </nav>
 
   <button class="guide-btn" onclick="startTour()" aria-label="Open guided tour">
@@ -1539,6 +1543,21 @@
     <div id="supplierList"></div>
   </div>
 
+  <!-- ══════════════════════ GABAY SA DISPENSING (add-on: 'dispense_guide') ══════════════════════ -->
+  <div id="panel-guides" class="panel">
+    <div class="section-header">
+      <h2>Gabay sa Dispensing</h2>
+      <p>Hanapin ang sintomas o sakit ng pasyente — lalabas ang gabay: karaniwang OTC, paalala, at kailan dapat sa doktor. <i>Pinamamahalaan ng Pharmetriks; awtomatikong nag-a-update.</i></p>
+    </div>
+
+    <div id="guideCategories" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px;"></div>
+    <div id="guideList"></div>
+
+    <div style="margin-top:16px;font-size:11px;color:#94a3b8;line-height:1.6;border-top:1px dashed #e5e7eb;padding-top:10px;">
+      ⚠️ <b>Paalala:</b> gabay lang ito, <b>hindi kapalit ng medikal na payo</b>. Para sa tamang lunas, kumonsulta sa doktor o lisensyadong parmasyutiko. Ikaw ang may pananagutan sa nilalaman ng mga gabay na ini-edit mo.
+    </div>
+  </div>
+
   <!-- Mobile-only upgrade CTA -->
   <div class="upgrade-cta mobile-only-cta" style="margin-top:24px;">
     <div class="uc-title"><svg class="ic ic-sm" style="margin-right:4px;vertical-align:-3px;"><use href="#i-rocket"/></svg>Ready to level up?</div>
@@ -1760,6 +1779,17 @@
     <div id="alertDetailBody" style="max-height:62vh;overflow:auto;"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="document.getElementById('alertDetailModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ GABAY: DETAIL MODAL ══════════════════════ -->
+<div class="modal-overlay" id="guideDetailModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <h2 id="guideDetailTitle" style="margin:0 0 10px;">Gabay</h2>
+    <div id="guideDetailBody" style="max-height:66vh;overflow:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('guideDetailModal').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
@@ -2032,6 +2062,7 @@
 <script>
 // ══════════════════ STORAGE ══════════════════
 const KEYS = { inv: 'rxmvp_inventory', sales: 'rxmvp_sales', exp: 'rxmvp_expenses', suki: 'rxmvp_suki', utang: 'rxmvp_utang', suppliers: 'rxmvp_suppliers', po: 'rxmvp_po', staff: 'rxmvp_staff', vale: 'rxmvp_vale' };
+const GUIDE_CACHE_KEY = 'rxmvp_guides'; // central admin-managed guides, cached read-only (not synced)
 
 function dbLoad(key) {
   try { return JSON.parse(localStorage.getItem(KEYS[key]) || '[]'); } catch { return []; }
@@ -2102,7 +2133,7 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ══════════════════ SIDEBAR NAV ══════════════════
-const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports', 'suppliers'];
+const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports', 'suppliers', 'guides'];
 
 function switchTab(name) {
   document.querySelectorAll('.nav-item[data-tab]').forEach(t => {
@@ -2123,6 +2154,7 @@ function switchTab(name) {
   if (name === 'utang')      { renderUtang(); }
   if (name === 'reports')    { renderReports(); }
   if (name === 'suppliers')  { renderSuppliers(); }
+  if (name === 'guides')     { fetchGuides(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -3932,6 +3964,115 @@ function deletePo(id) {
 }
 window.renderSuppliers = renderSuppliers;
 
+// ══════════════════ GABAY SA DISPENSING (add-on: 'dispense_guide') ══════════════════
+function guideEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('dispense_guide')); }
+function applyGuideVisibility() {
+  const on = guideEnabled();
+  const nav = document.getElementById('navGuides');
+  const mob = document.getElementById('mobtab-guides');
+  if (nav) nav.style.display = on ? '' : 'none';
+  if (mob) mob.style.display = on ? '' : 'none';
+  const panel = document.getElementById('panel-guides');
+  if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
+}
+window.applyGuideVisibility = applyGuideVisibility;
+
+// Central guides are ADMIN-MANAGED (curated in the portal, shared by every botika).
+// The app fetches them read-only from /api/guides and caches them in localStorage so
+// the Gabay tab still works offline after one online fetch. No per-account editing.
+function readGuideCache() {
+  try { return JSON.parse(localStorage.getItem(GUIDE_CACHE_KEY) || '[]'); } catch (e) { return []; }
+}
+let guideData = readGuideCache();
+let selectedGuideCat = '';
+
+function fetchGuides() {
+  // Show whatever we cached first (instant + offline), then refresh from the server.
+  renderGuideCategories();
+  renderGuides();
+  if (!guideEnabled() || typeof fetch !== 'function') return;
+  fetch('/api/guides', { credentials: 'include' })
+    .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(d => {
+      if (!d || !Array.isArray(d.guides)) return;
+      guideData = d.guides;
+      try { localStorage.setItem(GUIDE_CACHE_KEY, JSON.stringify(guideData)); } catch (e) {}
+      renderGuideCategories();
+      renderGuides();
+    })
+    .catch(() => { /* offline / not entitled — keep the cached copy */ });
+}
+window.fetchGuides = fetchGuides;
+
+// Match a guide's suggested generic against current inventory (for the stock chip).
+function guideStockInfo(generic) {
+  const g = (generic || '').trim().toLowerCase();
+  if (!g) return null;
+  const matches = p => [(p.generic_name || ''), (p.brand_name || '')]
+    .map(x => x.toLowerCase()).some(n => n && (n === g || n.includes(g) || g.includes(n)));
+  const m = (invData || []).find(p => matches(p) && (Number(p.qty) || 0) > 0) || (invData || []).find(matches);
+  return m ? { label: (m.brand_name || m.generic_name || 'item'), price: Number(m.price) || 0, qty: Number(m.qty) || 0 } : null;
+}
+
+function setGuideCat(c) { selectedGuideCat = c; renderGuideCategories(); renderGuides(); }
+window.setGuideCat = setGuideCat;
+
+function renderGuideCategories() {
+  const host = document.getElementById('guideCategories');
+  if (!host) return;
+  const cats = Array.from(new Set((guideData || []).map(g => (g.category || '').trim()).filter(Boolean))).sort();
+  const chip = (label, val) => `<button type="button" data-cat="${esc(val)}" onclick="setGuideCat(this.getAttribute('data-cat'))" style="border:1px solid ${selectedGuideCat === val ? '#0033FF' : 'rgba(151,125,255,.3)'};background:${selectedGuideCat === val ? '#0033FF' : '#fff'};color:${selectedGuideCat === val ? '#fff' : '#1e0a47'};border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">${esc(label)}</button>`;
+  host.innerHTML = chip('Lahat', '') + cats.map(c => chip(c, c)).join('');
+}
+window.renderGuideCategories = renderGuideCategories;
+
+function renderGuides() {
+  if (!guideEnabled()) return;
+  const host = document.getElementById('guideList');
+  if (!host) return;
+  const cat = selectedGuideCat;
+  const items = (guideData || [])
+    .filter(g => cat === '' || (g.category || '') === cat)
+    .sort((a, b) => (a.condition || '').localeCompare(b.condition || ''));
+  if (!items.length) {
+    host.innerHTML = `<div class="ins-empty">${guideData.length ? 'Walang gabay sa category na ito.' : 'Wala pang gabay. Kumonekta sa internet para makuha ang mga gabay mula sa admin.'}</div>`;
+    return;
+  }
+  host.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">${items.map(g => {
+    const meds = (g.meds || '').split(',').map(s => s.trim()).filter(Boolean);
+    const more = meds.length > 1 ? ` +${meds.length - 1}` : '';
+    return `<button type="button" onclick="openGuideDetail('${g.id}')" style="text-align:left;border:1px solid #eef2f7;border-radius:12px;padding:14px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:5px;font-family:inherit;">
+       <div style="font-weight:800;font-size:14px;color:#1e0a47;line-height:1.3;">${esc(g.condition)}</div>
+       ${g.category ? `<span style="align-self:flex-start;background:#eef2ff;color:#0033FF;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:6px;">${esc(g.category)}</span>` : ''}
+       ${meds.length ? `<div style="font-size:11.5px;color:#7c3aed;margin-top:2px;">💊 ${esc(meds[0])}${more}</div>` : ''}
+     </button>`;
+  }).join('')}</div>`;
+}
+window.renderGuides = renderGuides;
+
+function openGuideDetail(id) {
+  const g = (guideData || []).find(x => String(x.id) === String(id));
+  if (!g) return;
+  const meds = (g.meds || '').split(',').map(s => s.trim()).filter(Boolean);
+  const medChips = meds.map(mn => {
+    const s = guideStockInfo(mn);
+    const inStock = s && s.qty > 0;
+    const txt = s ? `${esc(mn)} · ${inStock ? '✓ ' + esc(s.label) + ' ' + peso(s.price) : '✗ ubos na'}` : `${esc(mn)} · walang stock`;
+    return `<span style="display:inline-block;border:1px solid ${inStock ? '#bbf7d0' : '#fed7aa'};background:${inStock ? '#f0fdf4' : '#fff7ed'};color:${inStock ? '#166534' : '#9a3412'};border-radius:8px;padding:3px 9px;font-size:11.5px;font-weight:600;margin:2px 4px 2px 0;">${txt}</span>`;
+  }).join('');
+  document.getElementById('guideDetailTitle').textContent = g.condition || 'Gabay';
+  document.getElementById('guideDetailBody').innerHTML = `
+    ${g.category ? `<span style="display:inline-block;margin-bottom:8px;background:#eef2ff;color:#0033FF;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;">${esc(g.category)}</span>` : ''}
+    ${meds.length ? `<div style="margin-top:4px;"><div style="font-size:10.5px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">💊 Karaniwang OTC</div>${medChips}</div>` : ''}
+    ${g.dosage ? `<div style="margin-top:9px;font-size:13px;color:#334155;line-height:1.5;"><b>📋 Paalala:</b> ${esc(g.dosage)}</div>` : ''}
+    ${g.interactions ? `<div style="margin-top:7px;font-size:12.5px;color:#9a3412;line-height:1.5;"><b>🚫 Bawal isabay:</b> ${esc(g.interactions)}</div>` : ''}
+    ${g.contraindications ? `<div style="margin-top:7px;font-size:12.5px;color:#9a3412;line-height:1.5;"><b>⛔ Bawal sa:</b> ${esc(g.contraindications)}</div>` : ''}
+    ${g.redflags ? `<div style="margin-top:8px;font-size:12.5px;color:#9a3412;background:#fff7ed;border-radius:8px;padding:8px 10px;line-height:1.5;"><b>⚠️ Sa doktor kung:</b> ${esc(g.redflags)}</div>` : ''}
+  `;
+  document.getElementById('guideDetailModal').classList.add('open');
+}
+window.openGuideDetail = openGuideDetail;
+
 // ══════════════════ VALE & SAHOD NG STAFF (add-on: 'vale_sahod') ══════════════════
 function valeEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('vale_sahod')); }
 function applyValeVisibility() { const b = document.getElementById('valeBtn'); if (b) b.style.display = valeEnabled() ? '' : 'none'; }
@@ -5116,6 +5257,7 @@ applyPriceListVisibility();  // reveal the Price List button if cached features 
 applyPricingVisibility();    // reveal the Pricing button if cached features include it
 applyAuditVisibility();      // reveal the Stock Audit button if cached features include it
 applySuppliersVisibility();  // reveal the Suppliers tab if cached features include it
+applyGuideVisibility();      // reveal the Gabay tab if cached features include it
 applyValeVisibility();       // reveal the Vale & Sahod button if cached features include it
 applyBodegaVisibility();     // reveal the Bodega button + field if cached features include it
 
@@ -5731,6 +5873,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
         if (window.applySuppliersVisibility) window.applySuppliersVisibility();
         if (window.applyValeVisibility) window.applyValeVisibility();
         if (window.applyBodegaVisibility) window.applyBodegaVisibility();
+        if (window.applyGuideVisibility) window.applyGuideVisibility();
         hideOfflineBlock();
       })
       .catch(function (err) {
@@ -5769,7 +5912,13 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   window.PHARMETRIKS_SHOP = (loadLicense() || {}).pharmacy_name || '';
   window.PHARMETRIKS_HAS = function (key) {
     var f = (loadLicense() || {}).features || window.PHARMETRIKS_FEATURES || {};
-    return f[key] === true;
+    var v = f[key];
+    if (v === true) return true;
+    if (typeof v === 'string') {
+      var t = Date.parse(v);
+      return !isNaN(t) && t > Date.now();
+    }
+    return false;
   };
 
   // Apply add-on UI gating from the cached license immediately, so entitled
@@ -5787,6 +5936,7 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
     if (window.applySuppliersVisibility) window.applySuppliersVisibility();
     if (window.applyValeVisibility) window.applyValeVisibility();
     if (window.applyBodegaVisibility) window.applyBodegaVisibility();
+    if (window.applyGuideVisibility) window.applyGuideVisibility();
     if (window.renderSmartAlerts) window.renderSmartAlerts();
   } catch (e) {}
 
@@ -6033,6 +6183,10 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   <div class="mob-tab" id="mobtab-suppliers" onclick="switchTab('suppliers')" style="display:none;">
     <svg class="ic mob-tab-icon"><use href="#i-compass"/></svg>
     <span>Suppliers</span>
+  </div>
+  <div class="mob-tab" id="mobtab-guides" onclick="switchTab('guides')" style="display:none;">
+    <svg class="ic mob-tab-icon"><use href="#i-help"/></svg>
+    <span>Gabay</span>
   </div>
 </nav>
 
