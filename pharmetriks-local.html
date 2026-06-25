@@ -212,7 +212,11 @@
       background: var(--glass-bg);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
       border: 1px solid var(--glass-border);
-      border-radius: 16px; overflow: hidden;
+      border-radius: 16px;
+      /* Scroll horizontally on ANY device instead of clipping wide tables —
+         otherwise the rightmost column (Edit/Del) is cut off on iPad/MacBook
+         (>640px) where the table is wider than the container. */
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
       box-shadow: var(--glass-shadow);
     }
     table { width: 100%; border-collapse: collapse; }
