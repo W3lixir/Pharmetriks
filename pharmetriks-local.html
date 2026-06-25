@@ -142,6 +142,8 @@
     /* ══════════ MAIN ══════════ */
     .main { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; background: transparent; }
     .page { padding: 30px 34px; max-width: 1100px; width: 100%; }
+    /* Dispensing tab with the Gabay add-on needs the extra right-side room for the 3rd column. */
+    .page.page-wide { max-width: 1340px; }
     .panel { display: none; }
     .panel.active { display: block; }
 
@@ -283,7 +285,13 @@
     }
 
     /* ══════ Dispensing ══════ */
-    .dispense-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    /* Outer: left main (product+cart, then Transaction History) | Gabay rail.
+       The rail is its OWN column so the Transaction History rises right under the
+       cart instead of waiting for the (taller) guide list. */
+    .dispense-outer { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
+    .dispense-outer.has-guides { grid-template-columns: minmax(0,1fr) 340px; }
+    .dispense-main { min-width: 0; }
+    .dispense-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
     .product-list {
       max-height: 360px; overflow-y: auto;
       border: 1px solid var(--glass-border); border-radius: 16px;
@@ -311,6 +319,30 @@
       box-shadow: var(--glass-shadow);
     }
     .cart-panel h3 { font-size: 15px; font-weight: 800; margin-bottom: 14px; color: var(--ink); letter-spacing: -0.2px; }
+
+    /* Gabay sa Dispensing — 3rd column (right of the Cart). Gated by dispense_guide add-on. */
+    .dispense-guides {
+      background: var(--glass-bg-strong);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px; padding: 20px;
+      position: sticky; top: 28px;
+      max-height: calc(100vh - 56px); overflow-y: auto;
+      box-shadow: var(--glass-shadow);
+    }
+    .dispense-guides h3 { font-size: 15px; font-weight: 800; margin-bottom: 14px; color: var(--ink); letter-spacing: -0.2px; }
+    #dispenseGuideList { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .dg-card {
+      text-align: left; border: 1px solid #eef2f7; border-radius: 12px; padding: 13px 14px;
+      background: #fff; cursor: pointer; display: flex; flex-direction: column; gap: 6px; font-family: inherit;
+      transition: border-color .1s, box-shadow .1s;
+    }
+    .dg-card:hover { border-color: #c7d2fe; box-shadow: 0 4px 14px rgba(6,0,171,0.08); }
+    .dg-card .dg-cond { font-weight: 800; font-size: 14px; color: #1e0a47; line-height: 1.3; }
+    .dg-card .dg-cat { align-self: flex-start; background: #eef2ff; color: #0033FF; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 7px; border-radius: 6px; }
+    .dg-card .dg-med { font-size: 12px; color: #7c3aed; }
+    .dg-empty { color: var(--accent-soft-2); font-size: 12.5px; text-align: center; padding: 18px 6px; font-weight: 500; line-height: 1.5; }
+    .dg-note { margin-top: 14px; font-size: 10.5px; color: #94a3b8; line-height: 1.55; border-top: 1px dashed #e5e7eb; padding-top: 10px; }
     .cart-empty { color: var(--accent-soft-2); font-size: 13px; text-align: center; padding: 22px 0; font-weight: 500; }
     .cart-item {
       position: relative; display: flex; align-items: center; gap: 12px;
@@ -708,10 +740,13 @@
       .upgrade-cta { display: none; }
       .main { overflow: auto; }
       .page { padding: 20px 22px; }
-      .dispense-layout, .opex-layout { grid-template-columns: 1fr; }
+      .dispense-layout, .opex-layout, .dispense-outer, .dispense-outer.has-guides { grid-template-columns: 1fr; }
       .stats-row { grid-template-columns: repeat(2,1fr); }
       .form-row { grid-template-columns: 1fr 1fr; }
       .cart-panel { position: static; }
+      .dispense-guides { position: static; max-height: none; }
+      #dispenseGuideList { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+      .page.page-wide { max-width: 1100px; }
     }
 
     /* ── Phone (≤640px): hide sidebar, show mobile nav ── */
@@ -981,10 +1016,6 @@
     <div class="nav-item" data-tab="suppliers" id="navSuppliers" onclick="switchTab('suppliers')" style="display:none;">
       <svg class="ic"><use href="#i-compass"/></svg> Suppliers
     </div>
-    <!-- Gabay tab (add-on: 'dispense_guide'). Hidden unless entitled. -->
-    <div class="nav-item" data-tab="guides" id="navGuides" onclick="switchTab('guides')" style="display:none;">
-      <svg class="ic"><use href="#i-help"/></svg> Gabay
-    </div>
   </nav>
 
   <button class="guide-btn" onclick="startTour()" aria-label="Open guided tour">
@@ -1034,6 +1065,9 @@
       <p>Search a product, add to cart, then dispense to auto-deduct stock.</p>
     </div>
 
+    <!-- Outer: left main (controls + history) | Gabay rail (right, full height) -->
+    <div class="dispense-outer">
+    <div class="dispense-main">
     <div class="dispense-layout">
       <!-- Product search -->
       <div data-tour="product-search">
@@ -1098,7 +1132,7 @@
       </div>
     </div>
 
-    <!-- Transaction history -->
+    <!-- Transaction history (in the left main, so it rises right below the cart) -->
     <div style="margin-top:28px;">
       <div class="toolbar">
         <div class="toolbar-left">
@@ -1120,6 +1154,15 @@
         </table>
       </div>
     </div>
+    </div><!-- /.dispense-main -->
+
+    <!-- Gabay sa Dispensing (add-on: 'dispense_guide') — full-height rail on the right -->
+    <aside id="dispenseGuides" class="dispense-guides" style="display:none;">
+      <h3>📖 Gabay sa Dispensing</h3>
+      <div id="dispenseGuideList"></div>
+      <div class="dg-note">⚠️ <b>Paalala:</b> gabay lang ito, hindi kapalit ng medikal na payo. Para sa tamang lunas, kumonsulta sa doktor o lisensyadong parmasyutiko.</div>
+    </aside>
+    </div><!-- /.dispense-outer -->
   </div>
 
   <style>
@@ -1541,21 +1584,6 @@
 
     <div class="utang-ledger-label" style="margin-top:18px;">Suppliers</div>
     <div id="supplierList"></div>
-  </div>
-
-  <!-- ══════════════════════ GABAY SA DISPENSING (add-on: 'dispense_guide') ══════════════════════ -->
-  <div id="panel-guides" class="panel">
-    <div class="section-header">
-      <h2>Gabay sa Dispensing</h2>
-      <p>Hanapin ang sintomas o sakit ng pasyente — lalabas ang gabay: karaniwang OTC, paalala, at kailan dapat sa doktor. <i>Pinamamahalaan ng Pharmetriks; awtomatikong nag-a-update.</i></p>
-    </div>
-
-    <div id="guideCategories" style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px;"></div>
-    <div id="guideList"></div>
-
-    <div style="margin-top:16px;font-size:11px;color:#94a3b8;line-height:1.6;border-top:1px dashed #e5e7eb;padding-top:10px;">
-      ⚠️ <b>Paalala:</b> gabay lang ito, <b>hindi kapalit ng medikal na payo</b>. Para sa tamang lunas, kumonsulta sa doktor o lisensyadong parmasyutiko. Ikaw ang may pananagutan sa nilalaman ng mga gabay na ini-edit mo.
-    </div>
   </div>
 
   <!-- Mobile-only upgrade CTA -->
@@ -2133,7 +2161,7 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ══════════════════ SIDEBAR NAV ══════════════════
-const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports', 'suppliers', 'guides'];
+const TAB_NAMES = ['dispensing', 'inventory', 'opex', 'insights', 'utang', 'reports', 'suppliers'];
 
 function switchTab(name) {
   document.querySelectorAll('.nav-item[data-tab]').forEach(t => {
@@ -2147,14 +2175,14 @@ function switchTab(name) {
   document.getElementById('panel-' + name).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (name === 'dispensing') { renderProductList(); renderSales(); }
+  applyDispensePageWidth();   // widen only on Dispensing-with-guides; narrow elsewhere
+  if (name === 'dispensing') { renderProductList(); renderSales(); renderDispenseGuides(); }
   if (name === 'inventory')  { renderInventory(); }
   if (name === 'opex')       { renderOpexStats(); renderSalesLog(); renderExpenses(); }
   if (name === 'insights')   { renderInsights(); }
   if (name === 'utang')      { renderUtang(); }
   if (name === 'reports')    { renderReports(); }
   if (name === 'suppliers')  { renderSuppliers(); }
-  if (name === 'guides')     { fetchGuides(); }
 }
 
 // ══════════════════ INVENTORY ══════════════════
@@ -3967,29 +3995,37 @@ window.renderSuppliers = renderSuppliers;
 // ══════════════════ GABAY SA DISPENSING (add-on: 'dispense_guide') ══════════════════
 function guideEnabled() { return !!(window.PHARMETRIKS_HAS && window.PHARMETRIKS_HAS('dispense_guide')); }
 function applyGuideVisibility() {
+  // Guides now live in the 3rd column of the Dispensing tab (right of the Cart).
   const on = guideEnabled();
-  const nav = document.getElementById('navGuides');
-  const mob = document.getElementById('mobtab-guides');
-  if (nav) nav.style.display = on ? '' : 'none';
-  if (mob) mob.style.display = on ? '' : 'none';
-  const panel = document.getElementById('panel-guides');
-  if (!on && panel && panel.classList.contains('active')) switchTab('dispensing');
+  const block = document.getElementById('dispenseGuides');
+  if (block) block.style.display = on ? '' : 'none';
+  const outer = document.querySelector('.dispense-outer');
+  if (outer) outer.classList.toggle('has-guides', on);
+  applyDispensePageWidth();
+  renderDispenseGuides();
 }
 window.applyGuideVisibility = applyGuideVisibility;
 
+// The Dispensing tab needs extra right-side room ONLY when the guide column is shown.
+function applyDispensePageWidth() {
+  const page = document.querySelector('.page');
+  if (!page) return;
+  const onDispensing = document.getElementById('panel-dispensing').classList.contains('active');
+  page.classList.toggle('page-wide', onDispensing && guideEnabled());
+}
+window.applyDispensePageWidth = applyDispensePageWidth;
+
 // Central guides are ADMIN-MANAGED (curated in the portal, shared by every botika).
 // The app fetches them read-only from /api/guides and caches them in localStorage so
-// the Gabay tab still works offline after one online fetch. No per-account editing.
+// the right-side guide cards still work offline after one online fetch. No per-account editing.
 function readGuideCache() {
   try { return JSON.parse(localStorage.getItem(GUIDE_CACHE_KEY) || '[]'); } catch (e) { return []; }
 }
 let guideData = readGuideCache();
-let selectedGuideCat = '';
 
 function fetchGuides() {
   // Show whatever we cached first (instant + offline), then refresh from the server.
-  renderGuideCategories();
-  renderGuides();
+  renderDispenseGuides();
   if (!guideEnabled() || typeof fetch !== 'function') return;
   fetch('/api/guides', { credentials: 'include' })
     .then(r => (r.ok ? r.json() : Promise.reject(r.status)))
@@ -3997,8 +4033,7 @@ function fetchGuides() {
       if (!d || !Array.isArray(d.guides)) return;
       guideData = d.guides;
       try { localStorage.setItem(GUIDE_CACHE_KEY, JSON.stringify(guideData)); } catch (e) {}
-      renderGuideCategories();
-      renderGuides();
+      renderDispenseGuides();
     })
     .catch(() => { /* offline / not entitled — keep the cached copy */ });
 }
@@ -4014,41 +4049,29 @@ function guideStockInfo(generic) {
   return m ? { label: (m.brand_name || m.generic_name || 'item'), price: Number(m.price) || 0, qty: Number(m.qty) || 0 } : null;
 }
 
-function setGuideCat(c) { selectedGuideCat = c; renderGuideCategories(); renderGuides(); }
-window.setGuideCat = setGuideCat;
-
-function renderGuideCategories() {
-  const host = document.getElementById('guideCategories');
+// Render the guide quick-reference cards in the Dispensing right column (2-col grid).
+function renderDispenseGuides() {
+  const host = document.getElementById('dispenseGuideList');
   if (!host) return;
-  const cats = Array.from(new Set((guideData || []).map(g => (g.category || '').trim()).filter(Boolean))).sort();
-  const chip = (label, val) => `<button type="button" data-cat="${esc(val)}" onclick="setGuideCat(this.getAttribute('data-cat'))" style="border:1px solid ${selectedGuideCat === val ? '#0033FF' : 'rgba(151,125,255,.3)'};background:${selectedGuideCat === val ? '#0033FF' : '#fff'};color:${selectedGuideCat === val ? '#fff' : '#1e0a47'};border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">${esc(label)}</button>`;
-  host.innerHTML = chip('Lahat', '') + cats.map(c => chip(c, c)).join('');
-}
-window.renderGuideCategories = renderGuideCategories;
-
-function renderGuides() {
-  if (!guideEnabled()) return;
-  const host = document.getElementById('guideList');
-  if (!host) return;
-  const cat = selectedGuideCat;
+  if (!guideEnabled()) { return; }   // block already hidden by applyGuideVisibility
   const items = (guideData || [])
-    .filter(g => cat === '' || (g.category || '') === cat)
+    .slice()
     .sort((a, b) => (a.condition || '').localeCompare(b.condition || ''));
   if (!items.length) {
-    host.innerHTML = `<div class="ins-empty">${guideData.length ? 'Walang gabay sa category na ito.' : 'Wala pang gabay. Kumonekta sa internet para makuha ang mga gabay mula sa admin.'}</div>`;
+    host.innerHTML = `<div class="dg-empty">Wala pang gabay. Kumonekta sa internet para makuha ang mga gabay mula sa admin.</div>`;
     return;
   }
-  host.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">${items.map(g => {
+  host.innerHTML = items.map(g => {
     const meds = (g.meds || '').split(',').map(s => s.trim()).filter(Boolean);
     const more = meds.length > 1 ? ` +${meds.length - 1}` : '';
-    return `<button type="button" onclick="openGuideDetail('${g.id}')" style="text-align:left;border:1px solid #eef2f7;border-radius:12px;padding:14px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:5px;font-family:inherit;">
-       <div style="font-weight:800;font-size:14px;color:#1e0a47;line-height:1.3;">${esc(g.condition)}</div>
-       ${g.category ? `<span style="align-self:flex-start;background:#eef2ff;color:#0033FF;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:6px;">${esc(g.category)}</span>` : ''}
-       ${meds.length ? `<div style="font-size:11.5px;color:#7c3aed;margin-top:2px;">💊 ${esc(meds[0])}${more}</div>` : ''}
+    return `<button type="button" class="dg-card" onclick="openGuideDetail('${g.id}')">
+       <div class="dg-cond">${esc(g.condition)}</div>
+       ${g.category ? `<span class="dg-cat">${esc(g.category)}</span>` : ''}
+       ${meds.length ? `<div class="dg-med">💊 ${esc(meds[0])}${more}</div>` : ''}
      </button>`;
-  }).join('')}</div>`;
+  }).join('');
 }
-window.renderGuides = renderGuides;
+window.renderDispenseGuides = renderDispenseGuides;
 
 function openGuideDetail(id) {
   const g = (guideData || []).find(x => String(x.id) === String(id));
@@ -4922,6 +4945,7 @@ function dispenseCart() {
   renderProductList();
   renderOpexStats();
   renderSalesLog();
+  renderDispenseGuides();   // refresh guide stock chips after stock change
   toast(utangSuki
     ? `Inutang ni ${utangSuki.name}: ${peso(total)} — ${orderNum}`
     : `Dispensed ${orderNum} — ${peso(total)}`);
@@ -4933,16 +4957,36 @@ function renderSales() {
     tb.innerHTML = `<tr class="empty-row"><td colspan="6">No transactions yet.</td></tr>`;
     return;
   }
-  tb.innerHTML = salesData.map(tx => `<tr>
+  // Newest first, then show only up to salesViewLimit with a "See more" pager —
+  // keeps the table fast even with thousands of imported transactions.
+  const sorted = [...salesData].sort((a, b) => (`${b.date} ${b.time || ''}`).localeCompare(`${a.date} ${a.time || ''}`));
+  const visible = sorted.slice(0, salesViewLimit);
+  let html = visible.map(tx => `<tr>
     <td class="font-mono" style="color:#94a3b8;">${esc(tx.date)}</td>
     <td class="font-mono" style="color:#7c3aed;font-weight:700;">${esc(tx.order_number)}</td>
     <td>${esc(tx.customer || '—')}</td>
-    <td style="font-size:12px;color:#c4b5fd;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+    <td style="font-size:12px;color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
       ${esc(tx.items.map(i => `${i.generic_name} ×${i.qty}`).join(', '))}
     </td>
     <td class="text-right font-mono" style="font-weight:700;color:#1e0a47;">${peso(tx.total)}</td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteTransaction('${tx.id}')">Del</button></td>
   </tr>`).join('');
+
+  if (sorted.length > salesViewLimit) {
+    const remaining = sorted.length - salesViewLimit;
+    html += `<tr class="see-more-row"><td colspan="6">
+      <button class="see-more-btn" onclick="salesViewLimit += 20; renderSales();">
+        See more (${remaining} remaining) <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-down"/></svg>
+      </button>
+    </td></tr>`;
+  } else if (salesViewLimit > 20 && sorted.length > 20) {
+    html += `<tr class="see-more-row"><td colspan="6">
+      <button class="see-more-btn" onclick="salesViewLimit = 20; renderSales();">
+        Show less <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-up"/></svg>
+      </button>
+    </td></tr>`;
+  }
+  tb.innerHTML = html;
 }
 
 function deleteTransaction(id) {
@@ -4975,6 +5019,7 @@ let expData = dbLoad('exp');
 let opexPeriod = 'month';        // today | yesterday | week | month | all
 let salesLogLimit = 10;
 let expenseLogLimit = 10;
+let salesViewLimit = 20;   // Dispensing tab Transaction History (newest first, +20 per "See more")
 
 function periodRange(period) {
   const now = new Date();
@@ -5257,7 +5302,8 @@ applyPriceListVisibility();  // reveal the Price List button if cached features 
 applyPricingVisibility();    // reveal the Pricing button if cached features include it
 applyAuditVisibility();      // reveal the Stock Audit button if cached features include it
 applySuppliersVisibility();  // reveal the Suppliers tab if cached features include it
-applyGuideVisibility();      // reveal the Gabay tab if cached features include it
+applyGuideVisibility();      // reveal the Dispensing guide cards if cached features include it
+fetchGuides();               // populate the guide cards (cached first, then refresh from server)
 applyValeVisibility();       // reveal the Vale & Sahod button if cached features include it
 applyBodegaVisibility();     // reveal the Bodega button + field if cached features include it
 
@@ -6183,10 +6229,6 @@ if (!localStorage.getItem(TOUR_SEEN_KEY)) {
   <div class="mob-tab" id="mobtab-suppliers" onclick="switchTab('suppliers')" style="display:none;">
     <svg class="ic mob-tab-icon"><use href="#i-compass"/></svg>
     <span>Suppliers</span>
-  </div>
-  <div class="mob-tab" id="mobtab-guides" onclick="switchTab('guides')" style="display:none;">
-    <svg class="ic mob-tab-icon"><use href="#i-help"/></svg>
-    <span>Gabay</span>
   </div>
 </nav>
 

@@ -75,6 +75,7 @@ export async function signupAction(formData: FormData): Promise<SignupResult> {
          <b>Botika:</b> ${escapeHtml(pharmacyName)}<br>
          <b>Pangalan:</b> ${escapeHtml(fullName)}<br>
          <b>Email:</b> ${escapeHtml(email)}<br>
+         <b>Password (mungkahi ng user):</b> <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">${escapeHtml(password)}</code><br>
          <b>Petsa:</b> ${escapeHtml(new Date().toLocaleString('en-PH'))}
        </p>
        <p style="margin:12px 0 0;color:#64748b;font-size:13px">

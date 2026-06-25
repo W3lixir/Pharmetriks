@@ -1,30 +1,15 @@
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import AuthShell from '@/components/auth/AuthShell';
 import HelpButton from '@/components/ui/HelpButton';
 import Icon from '@/components/ui/Icon';
 import CheckoutClient from './CheckoutClient';
+import { resolveGcash } from '@/lib/gcash';
 import type { ProfileStatus } from '@/lib/auth';
 import type { FeatureMap } from '@/lib/features';
 
 export const metadata = { title: 'Upload receipt · Pharmetriks' };
 export const dynamic = 'force-dynamic';
-
-// At render time, check portal/public/img/ for a real GCash QR file.
-// Order of preference: gcash-qr.png → .jpg → .jpeg → .webp → placeholder.
-const QR_CANDIDATES = ['gcash-qr.png', 'gcash-qr.jpg', 'gcash-qr.jpeg', 'gcash-qr.webp'] as const;
-
-function resolveQrSrc(): { src: string; isReal: boolean } {
-  const dir = path.join(process.cwd(), 'public', 'img');
-  for (const f of QR_CANDIDATES) {
-    if (existsSync(path.join(dir, f))) {
-      return { src: `/img/${f}`, isReal: true };
-    }
-  }
-  return { src: '/img/gcash-qr-placeholder.svg', isReal: false };
-}
 
 export default async function UploadReceiptPage({
   searchParams,
@@ -44,9 +29,7 @@ export default async function UploadReceiptPage({
   const status = (profile?.status ?? 'pending') as ProfileStatus;
   const mode: 'new' | 'upgrade' = status === 'approved' ? 'upgrade' : 'new';
 
-  const gcashNumber = process.env.NEXT_PUBLIC_GCASH_NUMBER || '+63 991 381 ••••';
-  const gcashName   = process.env.NEXT_PUBLIC_GCASH_NAME   || 'KA*L TR****N O.';
-  const { src: qrSrc, isReal: isRealQr } = resolveQrSrc();
+  const { qrSrc, isRealQr, gcashNumber, gcashName } = resolveGcash();
 
   const greeting = profile?.full_name?.split(' ')[0];
   const granted   = (profile?.features ?? {}) as FeatureMap;

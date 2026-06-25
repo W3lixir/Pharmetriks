@@ -11,9 +11,11 @@ type Props = {
   gcashNumber: string;
   gcashName: string;
   amount: string;
+  /** Show the Amount / GCash number / Account name copy rows. Off = QR-only (signup). */
+  details?: boolean;
 };
 
-export default function GcashCard({ qrSrc, isRealQr, gcashNumber, gcashName, amount }: Props) {
+export default function GcashCard({ qrSrc, isRealQr, gcashNumber, gcashName, amount, details = true }: Props) {
   return (
     <div className="rounded-glass border border-white/65 bg-white/80 backdrop-blur-md p-5 shadow-glass">
       <div className="flex items-center justify-between">
@@ -41,16 +43,18 @@ export default function GcashCard({ qrSrc, isRealQr, gcashNumber, gcashName, amo
         )}
       </div>
 
-      <div className="mt-5 grid gap-2">
-        <CopyRow label="Amount" value={amount} highlight />
-        <CopyRow label="GCash number" value={gcashNumber} />
-        <div className="flex items-center justify-between rounded-[10px] bg-white/60 border border-white px-3 py-2.5">
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-ink-2/60">
-            Account name
-          </span>
-          <span className="font-mono text-[12.5px] font-bold text-ink">{gcashName}</span>
+      {details && (
+        <div className="mt-5 grid gap-2">
+          <CopyRow label="Amount" value={amount} highlight />
+          <CopyRow label="GCash number" value={gcashNumber} />
+          <div className="flex items-center justify-between rounded-[10px] bg-white/60 border border-white px-3 py-2.5">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-ink-2/60">
+              Account name
+            </span>
+            <span className="font-mono text-[12.5px] font-bold text-ink">{gcashName}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <ol className="mt-5 space-y-1.5 text-[12.5px] font-semibold text-ink-2/85">
         <li className="flex items-start gap-2">
@@ -59,7 +63,7 @@ export default function GcashCard({ qrSrc, isRealQr, gcashNumber, gcashName, amo
         </li>
         <li className="flex items-start gap-2">
           <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/10 text-accent shrink-0 text-[10px] font-extrabold">2</span>
-          Scan yung QR sa taas, o i-copy ang number sa baba.
+          {details ? 'Scan yung QR sa taas, o i-copy ang number sa baba.' : 'Scan yung QR sa taas.'}
         </li>
         <li className="flex items-start gap-2">
           <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/10 text-accent shrink-0 text-[10px] font-extrabold">3</span>
