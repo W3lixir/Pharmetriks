@@ -2299,6 +2299,10 @@ function expiryStatus(expiry_date) {
   return 'ok';
 }
 
+let invViewLimit = 100;   // cap rendered rows; a shop with thousands of imported
+                          // products would otherwise freeze ~1.5s per keystroke
+                          // building every row's DOM. "See more" reveals +100.
+
 function renderInventory() {
   const q = (document.getElementById('invSearch').value || '').toLowerCase();
   if (window.refreshCatFilters) window.refreshCatFilters(); // keep category options fresh
@@ -2311,7 +2315,8 @@ function renderInventory() {
   if (!filtered.length) {
     tb.innerHTML = `<tr class="empty-row"><td colspan="10">${invData.length ? 'No results found.' : 'No products yet. Click + Add Product to get started.'}</td></tr>`;
   } else {
-    tb.innerHTML = filtered.map(p => {
+    const visible = filtered.slice(0, invViewLimit);
+    tb.innerHTML = visible.map(p => {
       const expStatus = expiryStatus(p.expiry_date);
       let statusLabel, badgeClass;
       if (p.qty <= 0)                    { statusLabel = 'Out of Stock'; badgeClass = 'badge-red'; }
@@ -2338,6 +2343,18 @@ function renderInventory() {
         </td>
       </tr>`;
     }).join('');
+
+    if (filtered.length > invViewLimit) {
+      tb.innerHTML += `<tr class="see-more-row"><td colspan="10">
+        <button class="see-more-btn" onclick="invViewLimit += 100; renderInventory();">
+          See more (${filtered.length - invViewLimit} pa) <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-down"/></svg>
+        </button></td></tr>`;
+    } else if (invViewLimit > 100 && filtered.length > 100) {
+      tb.innerHTML += `<tr class="see-more-row"><td colspan="10">
+        <button class="see-more-btn" onclick="invViewLimit = 100; renderInventory();">
+          Show less <svg class="ic ic-sm" style="vertical-align:-3px;"><use href="#i-chev-up"/></svg>
+        </button></td></tr>`;
+    }
   }
 
   const outStock = invData.filter(p => p.qty <= 0).length;
@@ -4637,24 +4654,30 @@ function handleImportModalClick(e) {
   if (e.target === e.currentTarget) closeInvImportModal();
 }
 
+// Proper RFC-4180-style parser: walks the whole text char-by-char so a quoted
+// field may contain commas AND newlines. (An earlier version split on newlines
+// first, which corrupted any cell with an embedded line break — e.g. a
+// multi-line Remarks/Notes value would break the row and everything after it,
+// silently mangling an export→re-import round-trip.)
 function parseCSVText(text) {
+  text = String(text == null ? '' : text).replace(/\r\n?/g, '\n'); // normalize CRLF / lone CR
   const rows = [];
-  const lines = text.split(/\r?\n/);
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    const cols = [];
-    let cur = '', inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
+  let row = [], cur = '', inQuote = false;
+  const endCell = () => { row.push(cur.trim()); cur = ''; };
+  const endRow  = () => { endCell(); if (!(row.length === 1 && row[0] === '')) rows.push(row); row = []; };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuote) {
       if (ch === '"') {
-        if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
-        else { inQuote = !inQuote; }
-      } else if (ch === ',' && !inQuote) { cols.push(cur.trim()); cur = ''; }
-      else { cur += ch; }
-    }
-    cols.push(cur.trim());
-    rows.push(cols);
+        if (text[i + 1] === '"') { cur += '"'; i++; } // escaped quote ""
+        else inQuote = false;
+      } else cur += ch;
+    } else if (ch === '"') inQuote = true;
+    else if (ch === ',')  endCell();
+    else if (ch === '\n') endRow();
+    else cur += ch;
   }
+  endRow(); // flush trailing cell/row (file with no final newline)
   return rows;
 }
 
@@ -4866,7 +4889,12 @@ function renderProductList() {
     el.innerHTML = `<div style="padding:28px;text-align:center;color:#c4b5fd;font-size:13px;">${msg}</div>`;
     return;
   }
-  el.innerHTML = products.map(p => {
+  // This is a scrollable search list — only a handful are ever visible at once,
+  // so rendering thousands of rows just to scroll past them freezes the tab on
+  // big catalogs. Cap it; the search box is how you narrow to what you need.
+  const PRODUCT_CAP = 50;
+  const shown = products.slice(0, PRODUCT_CAP);
+  el.innerHTML = shown.map(p => {
     const out = p.qty <= 0;
     const inCart = cart.some(c => c.product_id === p.id);
     return `<div class="product-item ${inCart ? 'in-cart' : ''} ${out ? 'product-out' : ''}" onclick="addToCart('${p.id}')">
@@ -4877,7 +4905,9 @@ function renderProductList() {
         ${inCart ? '&nbsp;<span class="pin-cart"><svg class="ic ic-sm" style="vertical-align:-2px;"><use href="#i-check"/></svg> In cart</span>' : ''}
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (products.length > PRODUCT_CAP
+    ? `<div style="padding:12px;text-align:center;color:#94a3b8;font-size:12px;font-weight:600;">+${products.length - PRODUCT_CAP} pa — i-type ang pangalan para hanapin</div>`
+    : '');
 }
 
 function addToCart(id) {

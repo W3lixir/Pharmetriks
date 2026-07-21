@@ -67,13 +67,16 @@ export default async function AdminDashboard({ searchParams }: { searchParams: S
     }
   }
 
-  const { data: rows, error } = await qb;
+  // The filtered user list and the per-status counts are independent — run them
+  // in parallel instead of one-after-the-other so the page waits on a single
+  // Supabase round-trip's latency, not two stacked.
+  const [{ data: rows, error }, { data: counts }] = await Promise.all([
+    qb,
+    svc.from('profiles').select('status', { count: 'exact', head: false }),
+  ]);
   const profiles = (rows ?? []) as Profile[];
 
   // ── Counts per status for the filter pills ────────────────────────────
-  const { data: counts } = await svc
-    .from('profiles')
-    .select('status', { count: 'exact', head: false });
   const countsByStatus: Record<string, number> = {};
   (counts ?? []).forEach((r: { status: string | null }) => {
     if (r.status) countsByStatus[r.status] = (countsByStatus[r.status] ?? 0) + 1;

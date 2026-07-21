@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Icon from '@/components/ui/Icon';
 import Pill from '@/components/ui/Pill';
 import GlassCard from '@/components/ui/GlassCard';
@@ -98,10 +99,15 @@ export default function Preview() {
                   <div className="w-full h-full rounded-glass bg-pink-soft border border-white/65 overflow-hidden relative shadow-lg">
                     <div aria-hidden className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-accent-soft/40 blur-2xl z-10" />
                     <div aria-hidden className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-pink blur-2xl z-10" />
-                    <img
+                    {/* next/image: serves lazy-loaded, responsively-sized WebP/AVIF
+                        instead of the raw ~1.4 MB 2860px PNG (delivered at the
+                        card's real width, a fraction of the source). */}
+                    <Image
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-contain"
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 45vw"
+                      className="object-contain"
                     />
                   </div>
                 </div>
