@@ -183,6 +183,7 @@
     }
     .btn-primary:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,51,255,0.4); }
     .btn-primary:disabled { background: var(--accent-soft-2); cursor: not-allowed; box-shadow: none; transform: none; filter: none; }
+    #discountMode:disabled, #discountValue:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
     .btn-secondary {
       background: var(--glass-bg-strong); color: var(--ink-2);
       border: 1.5px solid var(--glass-border);
@@ -209,6 +210,7 @@
 
     /* Tables — glassy card */
     .table-wrap {
+      position: relative;
       background: var(--glass-bg);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
       border: 1px solid var(--glass-border);
@@ -218,7 +220,36 @@
          (>640px) where the table is wider than the container. */
       overflow-x: auto; -webkit-overflow-scrolling: touch;
       box-shadow: var(--glass-shadow);
+      /* Nudge browsers that still support it toward an always-visible scrollbar
+         instead of an OS-hidden overlay one — belt-and-suspenders with the fade
+         hint below, since some Chromium/Safari versions ignore this. */
+      scrollbar-width: thin; scrollbar-color: rgba(0,51,255,0.35) transparent;
     }
+    .table-wrap::-webkit-scrollbar { height: 8px; }
+    .table-wrap::-webkit-scrollbar-track { background: transparent; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(0,51,255,0.35); border-radius: 8px; }
+    .table-wrap::-webkit-scrollbar-thumb:hover { background: rgba(0,51,255,0.55); }
+    /* macOS/iPadOS hide the native scrollbar until the user is mid-scroll, so
+       overflow-x:auto alone gave no hint that Edit/Del were reachable — a
+       real user on a MacBook reported "no scrollbar, columns just cut off".
+       Show a right-edge fade whenever the table actually has more to scroll to
+       (toggled by updateTableScrollHints()), independent of scrollbar rendering. */
+    .table-wrap::after {
+      /* A small floating "there's more this way" chip, not just a subtle shadow —
+         users didn't notice a plain edge-fade in testing. Anchored near the TOP
+         (not bottom) so it's visible the instant the panel opens, even for long
+         tables where the bottom edge is scrolled far out of view. */
+      content: '⟶ i-swipe'; position: absolute; top: 10px; right: 10px;
+      display: flex; align-items: center;
+      padding: 5px 10px; border-radius: 20px;
+      color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: .2px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+      box-shadow: 0 4px 14px rgba(0,51,255,.35);
+      pointer-events: none; opacity: 0; transition: opacity .15s;
+      animation: tw-nudge 1.4s ease-in-out infinite;
+    }
+    .table-wrap.tw-scrollable::after { opacity: 1; }
+    @keyframes tw-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
     table { width: 100%; border-collapse: collapse; }
     th {
       background: rgba(255,255,255,0.45); text-align: left; padding: 12px 16px;
@@ -307,6 +338,10 @@
     .product-item:last-child { border-bottom: none; }
     .product-item:hover { background: rgba(255,255,255,0.55); }
     .product-item.in-cart { background: rgba(151,125,255,0.12); }
+    /* Out-of-stock products stay searchable (a pharmacist mid-search shouldn't
+       see a product vanish and assume it was deleted) but can't be dispensed. */
+    .product-item.product-out { cursor: not-allowed; opacity: .55; }
+    .product-item.product-out:hover { background: none; }
     .pname { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -0.1px; }
     .pbrand { font-weight: 500; color: #94a3b8; font-size: 13px; }
     .pmeta { font-size: 12px; color: var(--accent-soft); margin-top: 4px; font-weight: 500; }
@@ -767,6 +802,10 @@
       table { width: max-content; min-width: 100%; }
       th { padding: 9px 10px; font-size: 9.5px; letter-spacing: 0.5px; white-space: nowrap; }
       td { padding: 10px 10px; font-size: 12.5px; }
+      /* The scroll-hint chip sits on the header row on desktop, but the header
+         is too short on mobile (smaller font/padding) — it ends up covering the
+         header text instead of floating above it. Drop it below the header. */
+      .table-wrap::after { top: 34px; padding: 4px 8px; font-size: 9.5px; }
 
       /* Stats: 2-col */
       .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -1091,7 +1130,7 @@
           <div id="discountSection" style="display:none;">
             <label class="cust-label">Discount</label>
             <div style="display:flex;gap:6px;margin-bottom:10px;">
-              <select id="discountType" onchange="onDiscountChange()" style="flex:1;min-width:0;">
+              <select id="discountType" onchange="onDiscountTypeChange()" style="flex:1;min-width:0;">
                 <option value="">None</option>
                 <option value="senior">Senior</option>
                 <option value="pwd">PWD</option>
@@ -1418,8 +1457,15 @@
       <div>
         <!-- Sales Log (transactions) -->
         <div class="toolbar">
-          <strong style="font-size:15px;color:#1e0a47;">Sales Log</strong>
-          <span id="salesLogCount" style="font-size:11px;color:#a78bfa;font-weight:600;"></span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <strong style="font-size:15px;color:#1e0a47;">Sales Log</strong>
+            <span id="salesLogCount" style="font-size:11px;color:#a78bfa;font-weight:600;"></span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('salesCsvInput').click()" title="Mag-import ng historical na benta (Date, Generic Name, Qty, Price kailangan)">⭳ Import CSV</button>
+            <input type="file" id="salesCsvInput" accept=".csv,text/csv" style="display:none;" onchange="salesImportCsv(event)">
+            <button class="btn btn-secondary btn-sm" onclick="exportSalesCSV()"><svg class="ic ic-sm"><use href="#i-download"/></svg> Export CSV</button>
+          </div>
         </div>
         <div class="table-wrap" style="margin-bottom:22px;">
           <table>
@@ -1840,6 +1886,15 @@
       <label>Petsa</label>
       <input type="date" id="entryDate" style="width:100%;">
     </div>
+    <!-- Optional: link this utang to an existing sale — e.g. staff forgot to use
+         "ipautang" at checkout, or an old paper-based credit is being backfilled.
+         Charge-only: a Bayad (payment) isn't tied to one specific sale. -->
+    <div class="form-group" id="entryTxGroup" style="display:none;">
+      <label>I-link sa transaction (optional)</label>
+      <select id="entryTxSelect" style="width:100%;" onchange="onEntryTxSelect()">
+        <option value="">— Wala / manual —</option>
+      </select>
+    </div>
     <div class="form-group">
       <label>Note (optional)</label>
       <input type="text" id="entryNote" placeholder="e.g. gamot, partial payment">
@@ -1882,9 +1937,11 @@
         <div class="form-group"><label>Target Margin (%)</label><input type="number" id="calcMargin" min="0" max="99" step="0.1" placeholder="e.g. 25" oninput="calcMarkup()"></div>
       </div>
       <div id="calcResult" class="calc-result">Maglagay ng cost at target margin para makita ang suggested SRP.</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:6px;">Sarili lang na kalkulasyon ito — hindi ito naka-link o naka-save sa isang produkto sa Inventory.</div>
     </div>
 
     <div class="utang-ledger-label" style="margin-top:16px;">Per-product margin</div>
+    <div style="font-size:11px;color:#94a3b8;margin:-4px 0 8px;">C = Cost/puhunan · S = SRP/presyo ngayon · pula/"manipis" kapag mas mababa sa 15% ang margin</div>
     <input type="text" id="pricingSearch" placeholder="Hanapin ang produkto…" oninput="renderPricingTable()" style="width:100%;margin-bottom:8px;">
     <div id="pricingBody" class="pricing-body"></div>
 
@@ -2188,6 +2245,37 @@ function switchTab(name) {
   if (name === 'reports')    { renderReports(); }
   if (name === 'suppliers')  { renderSuppliers(); }
 }
+
+// Wide tables (Inventory, Reports, Suppliers, …) scroll horizontally instead of
+// clipping (see .table-wrap), but macOS/iPadOS hide the native scrollbar until
+// the user is mid-scroll — with no visible affordance, users never discover the
+// hidden Edit/Del columns. Toggle a right-edge fade whenever a table actually
+// has more content to scroll to, independent of scrollbar rendering.
+function updateTableScrollHints() {
+  document.querySelectorAll('.table-wrap').forEach(wrap => {
+    const scrollable = wrap.scrollWidth > wrap.clientWidth + 1;
+    const atEnd = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 1;
+    wrap.classList.toggle('tw-scrollable', scrollable && !atEnd);
+    if (!wrap._twScrollBound) {
+      wrap._twScrollBound = true;
+      wrap.addEventListener('scroll', () => {
+        const se = wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 1;
+        wrap.classList.toggle('tw-scrollable', wrap.scrollWidth > wrap.clientWidth + 1 && !se);
+      }, { passive: true });
+    }
+  });
+}
+(function () {
+  let scheduled = false;
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; updateTableScrollHints(); });
+  }
+  window.addEventListener('resize', schedule);
+  new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  schedule();
+})();
 
 // ══════════════════ INVENTORY ══════════════════
 let invData = dbLoad('inv');
@@ -2785,9 +2873,36 @@ function openEntryModal(sukiId, kind) {
   document.getElementById('entryAmount').value = '';
   document.getElementById('entryDate').value = today();
   document.getElementById('entryNote').value = '';
+  const txGroup = document.getElementById('entryTxGroup');
+  if (txGroup) txGroup.style.display = kind === 'payment' ? 'none' : '';
+  populateEntryTxOptions();
   document.getElementById('entryModal').classList.add('open');
   setTimeout(() => document.getElementById('entryAmount').focus(), 80);
 }
+
+// Recent sales transactions a manual "Add Utang" entry can optionally link to —
+// mirrors what ipautang-at-checkout already stores automatically (note:
+// "Dispense ORD-XXX"), so a backfilled/forgotten credit reads identically in
+// the ledger to one charged at checkout. Capped to the most recent 50 so the
+// dropdown stays usable on a shop with thousands of transactions.
+function populateEntryTxOptions() {
+  const sel = document.getElementById('entryTxSelect');
+  if (!sel) return;
+  const sorted = [...(salesData || [])].sort((a, b) => (`${b.date} ${b.time || ''}`).localeCompare(`${a.date} ${a.time || ''}`));
+  sel.innerHTML = '<option value="">— Wala / manual —</option>' + sorted.slice(0, 50).map(tx =>
+    `<option value="${esc(tx.id)}">${esc(tx.order_number)} · ${esc(tx.date)} · ${peso(tx.total)}${tx.customer ? ' · ' + esc(tx.customer) : ''}</option>`
+  ).join('');
+}
+
+function onEntryTxSelect() {
+  const sel = document.getElementById('entryTxSelect');
+  const tx = (salesData || []).find(t => t.id === sel.value);
+  if (!tx) return;
+  document.getElementById('entryAmount').value = tx.total;
+  document.getElementById('entryDate').value = tx.date;
+  document.getElementById('entryNote').value = `Dispense ${tx.order_number}`;
+}
+window.onEntryTxSelect = onEntryTxSelect;
 
 function saveEntry() {
   const sukiId = document.getElementById('entrySukiId').value;
@@ -4734,24 +4849,31 @@ function getCustomerName() {
 function renderProductList() {
   const q = (document.getElementById('productSearch').value || '').toLowerCase();
   const products = invData
-    .filter(p => p.qty > 0 && [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f||'').toLowerCase().includes(q)) && catMatch(p, 'productSearch'))
-    .sort((a, b) => a.generic_name.localeCompare(b.generic_name));
+    .filter(p => [p.generic_name, p.brand_name, p.dosage, p.category].some(f => (f||'').toLowerCase().includes(q)) && catMatch(p, 'productSearch'))
+    .sort((a, b) => {
+      // In-stock first; out-of-stock items stay visible (so a search doesn't
+      // look like the product was deleted) but sink to the bottom since they
+      // can't actually be dispensed right now.
+      const oa = a.qty > 0 ? 0 : 1, ob = b.qty > 0 ? 0 : 1;
+      return oa - ob || a.generic_name.localeCompare(b.generic_name);
+    });
 
   const el = document.getElementById('productList');
   if (!products.length) {
-    const msg = invData.filter(p => p.qty > 0).length === 0
+    const msg = invData.length === 0
       ? 'No products in inventory. Go to Inventory tab to add products.'
       : 'No matching products found.';
     el.innerHTML = `<div style="padding:28px;text-align:center;color:#c4b5fd;font-size:13px;">${msg}</div>`;
     return;
   }
   el.innerHTML = products.map(p => {
+    const out = p.qty <= 0;
     const inCart = cart.some(c => c.product_id === p.id);
-    return `<div class="product-item ${inCart ? 'in-cart' : ''}" onclick="addToCart('${p.id}')">
+    return `<div class="product-item ${inCart ? 'in-cart' : ''} ${out ? 'product-out' : ''}" onclick="addToCart('${p.id}')">
       <div class="pname">${esc(p.generic_name)} <span class="pbrand">${esc(p.brand_name)}</span></div>
       <div class="pmeta">
         ${esc(p.dosage || 'N/A')} &nbsp;·&nbsp; ${peso(p.price)}/unit
-        &nbsp;·&nbsp; <span class="${p.qty <= 10 ? 'pout' : 'pstock'}">Stock: ${p.qty}</span>
+        &nbsp;·&nbsp; <span class="${p.qty <= 10 ? 'pout' : 'pstock'}">${out ? 'Out of stock' : `Stock: ${p.qty}`}</span>
         ${inCart ? '&nbsp;<span class="pin-cart"><svg class="ic ic-sm" style="vertical-align:-2px;"><use href="#i-check"/></svg> In cart</span>' : ''}
       </div>
     </div>`;
@@ -4838,11 +4960,44 @@ function applyDiscountVisibility() {
 }
 window.applyDiscountVisibility = applyDiscountVisibility;
 
+// Senior Citizen / PWD discounts are a legally mandated flat rate (RA 9994 /
+// RA 10754 = 20% off), not a per-transaction judgment call — so those two lock
+// the % + value fields to 20% rather than leaving them editable like Store/
+// Custom/Wholesale (where the rate genuinely varies). "None" disables the
+// fields entirely since there's nothing to enter.
+function applyDiscountFieldState() {
+  const typeEl = document.getElementById('discountType');
+  const modeEl = document.getElementById('discountMode');
+  const valEl  = document.getElementById('discountValue');
+  if (!typeEl || !modeEl || !valEl) return;
+  const type = typeEl.value;
+  if (type === 'senior' || type === 'pwd') {
+    modeEl.value = 'percent';
+    valEl.value = '20';
+    modeEl.disabled = true;
+    valEl.disabled = true;
+  } else if (type === '') {
+    modeEl.disabled = true;
+    valEl.disabled = true;
+    valEl.value = '';
+  } else {
+    modeEl.disabled = false;
+    valEl.disabled = false;
+  }
+}
+
+function onDiscountTypeChange() {
+  applyDiscountFieldState();
+  onDiscountChange();
+}
+window.onDiscountTypeChange = onDiscountTypeChange;
+
 function onDiscountChange() { if (typeof renderCart === 'function') renderCart(); }
 
 function resetDiscountInputs() {
   const t = document.getElementById('discountType'); if (t) t.value = '';
   const v = document.getElementById('discountValue'); if (v) v.value = '';
+  applyDiscountFieldState();
 }
 
 function renderCart() {
@@ -5017,6 +5172,119 @@ function exportSalesCSV() {
     rows);
   toast('Sales CSV downloaded!');
 }
+
+// A CSV date column can arrive in many formats depending on the source POS/
+// spreadsheet. Accept ISO (YYYY-MM-DD, what exportSalesCSV itself produces —
+// so round-tripping export→edit→import needs no conversion) as-is; fall back to
+// the native Date parser for anything else. Returns '' (row rejected) rather
+// than silently mis-parsing an ambiguous format like DD/MM vs MM/DD.
+function normalizeCsvDate(s) {
+  s = (s || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Import historical transactions into the Sales Log — e.g. backfilling old
+// paper/notebook records so Insights & Reports have real data to work with.
+// This is a RECORD-ONLY import: it never touches inventory stock, since these
+// sales already happened (unlike dispenseCart, which deducts stock for a NEW
+// sale happening right now). One row per line item, mirroring exportSalesCSV's
+// own columns — rows sharing the same Order Number are grouped into one
+// transaction. Order Numbers already present in the Sales Log are skipped so
+// re-importing the same file twice doesn't duplicate transactions.
+function salesImportCsv(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const rows = parseCSVText(ev.target.result || '');
+    e.target.value = '';
+    if (rows.length < 2) { toast('Walang laman ang CSV.', 'error'); return; }
+
+    const H = rows[0];
+    const idx = {
+      date:     findColIdx(H, ['date', 'petsa']),
+      order:    findColIdx(H, ['order number', 'order #', 'order_number', 'order no', 'receipt']),
+      customer: findColIdx(H, ['customer', 'pasyente', 'patient']),
+      generic:  findColIdx(H, ['generic name', 'generic', 'generic_name', 'gamot', 'item', 'product']),
+      brand:    findColIdx(H, ['brand name', 'brand', 'brand_name', 'tatak']),
+      dosage:   findColIdx(H, ['dosage', 'dose', 'strength']),
+      qty:      findColIdx(H, ['qty', 'quantity', 'bilang']),
+      price:    findColIdx(H, ['price', 'srp', 'unit price', 'halaga']),
+    };
+    if (idx.date === -1 || idx.generic === -1 || idx.qty === -1 || idx.price === -1) {
+      toast('Kailangan ng Date, Generic Name, Qty, at Price column sa CSV.', 'error');
+      return;
+    }
+
+    const existingOrders = new Set((salesData || []).map(t => t.order_number).filter(Boolean));
+    const groups = new Map();
+    let rowErrors = 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const date = normalizeCsvDate(r[idx.date]);
+      const generic = (r[idx.generic] || '').trim();
+      const qty = parseInt(csvNum(r[idx.qty]), 10);
+      const price = parseFloat(csvNum(r[idx.price]));
+      if (!date || !generic || isNaN(qty) || qty <= 0 || isNaN(price) || price < 0) { rowErrors++; continue; }
+
+      const orderNo = idx.order >= 0 ? (r[idx.order] || '').trim() : '';
+      if (orderNo && existingOrders.has(orderNo)) continue; // already imported before
+      const key = orderNo || `row-${i}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          date,
+          order_number: orderNo || `IMP-${date.replace(/-/g, '')}-${i}`,
+          customer: idx.customer >= 0 ? (r[idx.customer] || '').trim() : '',
+          items: [],
+        });
+      }
+      const brand  = idx.brand  >= 0 ? (r[idx.brand]  || '').trim() : '';
+      const dosage = idx.dosage >= 0 ? (r[idx.dosage] || '').trim() : '';
+      const gl = generic.toLowerCase(), bl = brand.toLowerCase();
+      const match = (invData || []).find(p => (p.generic_name || '').toLowerCase() === gl || (bl && (p.brand_name || '').toLowerCase() === bl));
+      groups.get(key).items.push({
+        product_id: match ? match.id : null,
+        generic_name: generic, brand_name: brand, dosage: dosage || 'N/A',
+        qty, price, cost: match ? (Number(match.cost) || 0) : 0,
+      });
+    }
+
+    if (!groups.size) {
+      toast(rowErrors
+        ? 'Walang na-import — siguraduhing may Date, Generic Name, Qty, at Price ang bawat row.'
+        : 'Wala nang bagong transaction na maii-import (existing na lahat).', 'error');
+      return;
+    }
+
+    const nowISO = new Date().toISOString();
+    let txCount = 0, itemCount = 0;
+    groups.forEach(g => {
+      const total = g.items.reduce((s, it) => s + it.qty * it.price, 0);
+      salesData.push({
+        id: uid(), date: g.date, time: '00:00:00', order_number: g.order_number,
+        customer: g.customer, items: g.items,
+        total, gross_total: total,
+        discount_type: null, discount_mode: null, discount_value: 0, discount_amount: 0,
+        suki_id: null, imported: true,
+        created_at: nowISO, updated_at: nowISO,
+      });
+      txCount++; itemCount += g.items.length;
+    });
+    dbSave('sales', salesData);
+    renderSalesLog();
+    if (typeof renderSales === 'function') renderSales();
+    if (typeof renderOpexStats === 'function') renderOpexStats();
+
+    toast(`Na-import: ${txCount} transaction${txCount !== 1 ? 's' : ''} (${itemCount} item${itemCount !== 1 ? 's' : ''})${rowErrors ? ` · ${rowErrors} row na-skip` : ''}.`);
+  };
+  reader.readAsText(file);
+}
+window.salesImportCsv = salesImportCsv;
 
 // ══════════════════ OPEX ══════════════════
 let expData = dbLoad('exp');
@@ -5299,6 +5567,7 @@ renderSales();
 renderOpexStats();
 renderSalesLog();
 renderExpenses();
+applyDiscountFieldState();   // grays out the discount %/value fields until a type is picked
 applyInsightsVisibility();  // reveal the Insights tab if cached features include it
 applyUtangVisibility();      // reveal the Utang tab if cached features include it
 applyReportsVisibility();    // reveal the Reports tab if cached features include it
@@ -5318,7 +5587,7 @@ const TOUR_STEPS = [
     target: null,
     icon: 'i-wave',
     title: 'Welcome to Pharmetriks',
-    body: 'Your offline-first pharmacy companion. Lahat ng data, naka-save sa device mo (localStorage) — walang signup, walang cloud.',
+    body: 'Your offline-first pharmacy companion. Lahat ng datos, naka-save muna sa device mo (localStorage) kahit walang internet — optional lang ang Cloud Sync add-on kapag kailangan mo ng backup o multi-device access.',
     tip: 'You can reopen this tour anytime via the <strong>How to Use</strong> button in the sidebar.'
   },
   {
