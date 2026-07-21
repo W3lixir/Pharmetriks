@@ -11,10 +11,12 @@ export default async function AdminRequestsPage() {
   await requireAdmin();
   const svc = adminService();
 
+  // Both still-to-verify (pending) and already-verified (paid) requests — the
+  // manager splits them into two sections. Handled/rejected ones drop off.
   const { data: rows } = await svc
     .from('signup_requests')
-    .select('id, full_name, pharmacy_name, email, password, receipt_path, payment_reference, created_at')
-    .eq('status', 'pending')
+    .select('id, full_name, pharmacy_name, email, password, receipt_path, payment_reference, status, created_at')
+    .in('status', ['pending', 'paid'])
     .order('created_at', { ascending: false });
 
   const requests: SignupRequestView[] = await Promise.all(
@@ -31,11 +33,14 @@ export default async function AdminRequestsPage() {
         email: r.email,
         password: r.password ?? '',
         paymentReference: r.payment_reference ?? '',
+        status: (r.status === 'paid' ? 'paid' : 'pending') as 'pending' | 'paid',
         createdAt: r.created_at,
         receiptUrl,
       };
     }),
   );
+
+  const expectedAmount = Number(process.env.NEXT_PUBLIC_APP_PRICE_PHP) || 249;
 
   return (
     <div className="space-y-6">
@@ -48,11 +53,11 @@ export default async function AdminRequestsPage() {
           Mga Signup Request{requests.length ? ` (${requests.length})` : ''}
         </h1>
         <p className="mt-1 text-[13.5px] font-medium text-ink-2/70">
-          I-review ang resibo, tapos i-click ang <strong>Create account</strong> — gagawin ang account
-          gamit ang email at password na inilagay nila (alam mo na rin agad).
+          I-check ang resibo → i-click ang <strong>Bayad na ✓</strong> kapag tama ang ₱{expectedAmount} →
+          tapos <strong>Create account</strong> para gawin ang account nila.
         </p>
       </div>
-      <RequestsManager requests={requests} />
+      <RequestsManager requests={requests} expectedAmount={expectedAmount} />
     </div>
   );
 }
