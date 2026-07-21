@@ -23,7 +23,7 @@ const FEATURES: Feature[] = [
   {
     icon: 'dispense',
     title: 'Fast dispensing',
-    body: 'Search products, build a cart, dispense — auto-deduct na ang stock. Hindi mo na kailangan i-update ang kwaderno pagkatapos ng bawat benta.',
+    body: 'Search products, build a cart, dispense — auto-deduct na ang stock. Hindi mo na kailangan i-update ang notebook pagkatapos ng bawat benta.',
   },
   {
     icon: 'inventory',

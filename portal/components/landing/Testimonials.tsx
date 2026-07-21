@@ -19,7 +19,7 @@ const TESTIMONIALS: Testimonial[] = [];
 const PROMISES = [
   {
     title: 'Uuwi ka nang mas maaga',
-    body: 'Hindi mo na kailangan mag-stay para magbilang at mag-total ng benta sa kwaderno. Tapos na ang araw mo pag-sara ng botika.',
+    body: 'Hindi mo na kailangan mag-stay para magbilang at mag-total ng benta sa notebook. Tapos na ang araw mo pag-sara ng botika.',
   },
   {
     title: 'Alam mo kung kumikita ka talaga',

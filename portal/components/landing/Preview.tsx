@@ -18,7 +18,7 @@ const ITEMS: Item[] = [
     body: 'I-search ang gamot, i-add sa cart, dispense. Auto-deduct na ang stock, may receipt-style history sa likod.',
     bullets: [
       'Search by generic or brand',
-      'Auto-detect low stock + expiry',
+      'Low-stock indicator sa search',
       'Optional customer name field',
     ],
     image: '/img/Dispensing.png',
