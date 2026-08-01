@@ -27,12 +27,12 @@ export default function Hero() {
             <p className="mt-5 mx-auto lg:mx-0 max-w-xl text-[15px] sm:text-base leading-relaxed text-ink-2/85 font-medium">
               Benta, stock, at gastos — kita mo lahat sa phone mo, kahit walang
               internet. Less pagod sa pagbibilang, less kaba sa pera.{' '}
-              <strong className="text-ink-2 font-extrabold">₱249 one-time, lifetime access.</strong>
+              <strong className="text-ink-2 font-extrabold">₱499 one-time, lifetime access.</strong>
             </p>
 
             <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <Link href="/signup" className="btn-primary text-[15px] px-5 py-3">
-                Mag-sign up — ₱249
+                Mag-sign up — ₱499
                 <Icon name="arrow-right" size={16} />
               </Link>
               <a href="#preview" className="btn-ghost text-[15px] px-5 py-3">

@@ -16,7 +16,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Paano ako magbabayad?',
-    a: "Sa /signup page, ipapakita namin ang GCash QR code. I-scan mo siya sa GCash app mo, send ₱249, screenshot mo ang receipt, then i-upload mo sa account mo. Within a few hours, ina-approve namin ang account mo.",
+    a: "Sa /signup page, ipapakita namin ang GCash QR code. I-scan mo siya sa GCash app mo, send ₱499, screenshot mo ang receipt, then i-upload mo sa account mo. Within a few hours, ina-approve namin ang account mo.",
   },
   {
     q: 'Anong oras kayo nag-aapprove? Ano kung tulog kayo?',

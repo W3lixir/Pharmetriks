@@ -3,7 +3,7 @@ import LegalShell from '@/components/legal/LegalShell';
 
 export const metadata = {
   title: 'Refund Policy · Pharmetriks',
-  description: 'Pharmetriks is a one-time ₱249 purchase with no refunds. Here\'s why, and how to make sure it\'s right for you bago mag-bayad.',
+  description: 'Pharmetriks is a one-time ₱499 purchase with no refunds. Here\'s why, and how to make sure it\'s right for you bago mag-bayad.',
 };
 
 const SECTIONS = [
@@ -25,14 +25,14 @@ export default function RefundPolicyPage() {
       <h2 id="summary">Summary</h2>
       <ul>
         <li>Sa ngayon, <strong>walang refunds</strong> — lahat ng payment ay final.</li>
-        <li><strong>₱249 one-time</strong> ang price, lifetime access habambuhay ng app.</li>
+        <li><strong>₱499 one-time</strong> ang price, lifetime access habambuhay ng app.</li>
         <li>Libre ang lahat ng info bago mag-bayad — features, FAQ, install guide.</li>
         <li>Kung may tanong ka, please message kami muna sa Facebook bago mag-bayad — happy to help.</li>
       </ul>
 
       <h2 id="why">Bakit ganito ang policy</h2>
       <p>
-        Yung ₱249 ay sadyang pinanatiling mura para affordable sa lahat ng small
+        Yung ₱499 ay sadyang pinanatiling mura para affordable sa lahat ng small
         pharmacy at solo owners. Sa price na yan, mahirap kaming mag-maintain ng
         full refund process — yung GCash transfer fees pa lang plus admin time,
         lampas na sa actual cost ng app.
@@ -41,7 +41,7 @@ export default function RefundPolicyPage() {
         Sa halip, ginawa naming complete yung public info bago mag-bayad —
         features page, FAQ, screenshots, at install guide. Plus may Facebook
         page kami kung saan kami sumasagot ng questions. Ang goal: ma-decide mo
-        nang maayos kung para sa'yo ang Pharmetriks bago mo ibigay ang ₱249 mo.
+        nang maayos kung para sa'yo ang Pharmetriks bago mo ibigay ang ₱499 mo.
       </p>
 
       <h2 id="before">Bago mag-bayad — check muna these</h2>

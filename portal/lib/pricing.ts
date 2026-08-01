@@ -4,7 +4,7 @@
 // both server and client components. Changing them requires a dev-server
 // restart locally / a rebuild on Vercel.
 
-export const APP_PRICE_PHP   = Number(process.env.NEXT_PUBLIC_APP_PRICE_PHP   ?? 249);
+export const APP_PRICE_PHP   = Number(process.env.NEXT_PUBLIC_APP_PRICE_PHP   ?? 499);
 export const ADDON_PRICE_PHP = Number(process.env.NEXT_PUBLIC_ADDON_PRICE_PHP ?? 99);
 
 /** ₱1,234 — peso formatting used everywhere a price is rendered. */

@@ -40,7 +40,7 @@ export default async function AdminRequestsPage() {
     }),
   );
 
-  const expectedAmount = Number(process.env.NEXT_PUBLIC_APP_PRICE_PHP) || 249;
+  const expectedAmount = Number(process.env.NEXT_PUBLIC_APP_PRICE_PHP) || 499;
 
   return (
     <div className="space-y-6">

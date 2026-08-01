@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Pharmetriks — Offline pharmacy audit tool',
   description:
-    'Track dispensing, inventory, and OPEX for your pharmacy. Works offline. ₱249 one-time, lifetime access.',
+    'Track dispensing, inventory, and OPEX for your pharmacy. Works offline. ₱499 one-time, lifetime access.',
   applicationName: 'Pharmetriks',
   appleWebApp: {
     capable: true,

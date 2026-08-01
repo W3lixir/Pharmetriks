@@ -81,7 +81,7 @@ export default function SignupForm() {
           required
           className="text-[13px] text-ink-2 file:mr-3 file:rounded-lg file:border-0 file:bg-accent/10 file:px-3 file:py-2 file:text-[12.5px] file:font-bold file:text-accent hover:file:bg-accent/15"
         />
-        <span className="text-[11.5px] text-ink-2/55 font-medium">Screenshot ng ₱249 GCash payment. Image lang (max 5 MB).</span>
+        <span className="text-[11.5px] text-ink-2/55 font-medium">Screenshot ng ₱499 GCash payment. Image lang (max 5 MB).</span>
       </label>
 
       <Field label="GCash reference # (optional)" name="payment_reference" type="text" autoComplete="off" placeholder="hal. 1234 567 8901" />
@@ -96,7 +96,7 @@ export default function SignupForm() {
       </p>
 
       <p className="text-[11.5px] text-center text-ink-2/55 font-medium leading-relaxed">
-        Sa pag-sign up, sumasang-ayon kang magbayad ng ₱249 one-time via GCash. Ire-review namin ang
+        Sa pag-sign up, sumasang-ayon kang magbayad ng ₱499 one-time via GCash. Ire-review namin ang
         resibo bago gawin ang account mo.
       </p>
     </form>

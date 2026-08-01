@@ -10,7 +10,7 @@ export default function CTABand() {
           <div aria-hidden className="absolute -inset-6 rounded-[40px] bg-lyna-cta opacity-30 blur-3xl" />
           <GlassCard tone="strong" className="relative p-8 sm:p-12 text-center">
             <h2 className="text-[26px] sm:text-4xl font-extrabold tracking-tight">
-              ₱249 para sa <br className="sm:hidden" />peace of mind mo.
+              ₱499 para sa <br className="sm:hidden" />peace of mind mo.
             </h2>
             <p className="mt-3 text-[14px] sm:text-base font-medium text-ink-2/80 max-w-xl mx-auto leading-relaxed">
               Mas mura pa sa isang grocery run — pero gagamitin mo araw-araw, at
@@ -18,7 +18,7 @@ export default function CTABand() {
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/signup" className="btn-primary text-[15px] px-5 py-3">
-                Mag-sign up — ₱249
+                Mag-sign up — ₱499
                 <Icon name="arrow-right" size={16} />
               </Link>
               <Link href="/install-guide" className="btn-ghost text-[15px] px-5 py-3">

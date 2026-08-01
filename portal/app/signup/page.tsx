@@ -13,9 +13,9 @@ export default function SignupPage() {
   return (
     <>
       <AuthShell
-        pill={{ tone: 'pink', label: '₱249 one-time, lifetime access' }}
+        pill={{ tone: 'pink', label: '₱499 one-time, lifetime access' }}
         title={<>Mag-apply ng account</>}
-        subtitle="Magbayad ng ₱249 via GCash, i-upload ang resibo, at ire-review namin bago gawin ang account mo."
+        subtitle="Magbayad ng ₱499 via GCash, i-upload ang resibo, at ire-review namin bago gawin ang account mo."
         width="md"
       >
         <div className="space-y-5">
@@ -24,7 +24,7 @@ export default function SignupPage() {
             isRealQr={isRealQr}
             gcashNumber={gcashNumber}
             gcashName={gcashName}
-            amount="₱249"
+            amount="₱499"
             details={false}
           />
           <SignupForm />

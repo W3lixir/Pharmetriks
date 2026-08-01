@@ -1,6 +1,6 @@
 # Pharmetriks
 
-Offline-first pharmacy audit tool for Filipino pharmacy staff. Sold for **₱249 one-time, lifetime access** via manual GCash payment.
+Offline-first pharmacy audit tool for Filipino pharmacy staff. Sold for **₱499 one-time, lifetime access** via manual GCash payment.
 
 ## Repository layout
 

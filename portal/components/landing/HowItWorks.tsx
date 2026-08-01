@@ -21,7 +21,7 @@ const STEPS: Step[] = [
     n: 2,
     iconName: 'gcash',
     title: 'Bayad via GCash',
-    body: '₱249 sa naka-display na QR code. I-scan, send, screenshot ng receipt.',
+    body: '₱499 sa naka-display na QR code. I-scan, send, screenshot ng receipt.',
   },
   {
     n: 3,

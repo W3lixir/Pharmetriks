@@ -15,7 +15,7 @@ export default function Footer() {
         <div className="mb-12 sm:mb-16 rounded-glass border border-white/65 bg-white/60 backdrop-blur-md p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-8 shadow-glass">
           <div className="flex-1">
             <div className="text-[10.5px] uppercase tracking-[1.5px] font-extrabold text-accent">
-              One-time ₱249 · Lifetime access
+              One-time ₱499 · Lifetime access
             </div>
             <h3 className="mt-1 text-[18px] sm:text-2xl font-extrabold tracking-tight leading-tight">
               Ready to streamline your pharmacy?

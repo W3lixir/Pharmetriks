@@ -38,7 +38,7 @@ const FEATURES: Feature[] = [
   {
     icon: 'zap',
     title: 'One-time ang app',
-    body: 'Bilhin nang minsan ang app sa ₱249 — lifetime. Optional lang ang add-ons (₱99/buwan kung gamit mo). Ikaw ang may kontrol, hindi ginagatungan ng monthly bill ang budget mo.',
+    body: 'Bilhin nang minsan ang app sa ₱499 — lifetime. Optional lang ang add-ons (₱99/buwan kung gamit mo). Ikaw ang may kontrol, hindi ginagatungan ng monthly bill ang budget mo.',
   },
 ];
 

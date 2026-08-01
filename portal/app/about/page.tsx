@@ -24,7 +24,7 @@ const PRINCIPLES = [
   {
     icon: 'zap' as const,
     title: 'One-time ang app',
-    body: "Ang app mismo, one-time ₱249 — lifetime access, walang renewal. Optional lang ang add-ons (₱99/buwan) kung kailangan mo — bayad ka lang sa gamit mo. Simple at honest.",
+    body: "Ang app mismo, one-time ₱499 — lifetime access, walang renewal. Optional lang ang add-ons (₱99/buwan) kung kailangan mo — bayad ka lang sa gamit mo. Simple at honest.",
   },
   {
     icon: 'heart' as const,
@@ -100,7 +100,7 @@ export default function AboutPage() {
               </p>
               <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/signup" className="btn-primary text-[15px] px-5 py-3">
-                  Try Pharmetriks — ₱249
+                  Try Pharmetriks — ₱499
                   <Icon name="arrow-right" size={16} />
                 </Link>
                 <Link href="/contact" className="btn-ghost text-[15px] px-5 py-3">
