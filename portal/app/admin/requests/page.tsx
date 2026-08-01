@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Icon from '@/components/ui/Icon';
 import Pill from '@/components/ui/Pill';
 import { requireAdmin, adminService } from '@/lib/admin';
+import { APP_PRICE_PHP } from '@/lib/pricing';
 import RequestsManager, { type SignupRequestView } from './RequestsManager';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,7 @@ export default async function AdminRequestsPage() {
     }),
   );
 
-  const expectedAmount = Number(process.env.NEXT_PUBLIC_APP_PRICE_PHP) || 499;
+  const expectedAmount = APP_PRICE_PHP;
 
   return (
     <div className="space-y-6">
